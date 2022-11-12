@@ -7,10 +7,10 @@ from constants import *
 
 np.random.seed(seed)   #Устанавливаем сид (sklearn использует сид от numpy)
 
+
 #Функция которая извлекает и обрабатывает данные из файла Education.csv
 #Данные парсяться чтобы получить категорию образования соотрудника, которая отображается в виде числа
-def get_education_info(input_data):
-    education_encoder = LabelEncoder()            #Создаем энкодер для строковых данных
+def get_education_info(input_data, education_encoder=None):
     ALLOWED_COLUMNS = ['id', 'Вид образования']   #Исключаем данные о специальности, т.к. там слишком много категорий
 
     education_data = pd.read_csv('dataset/Education.csv') #Читаем файл
@@ -31,23 +31,31 @@ def get_education_info(input_data):
     for category in infrequent_categories:
         data.loc[data['Вид образования'] == category, 'Вид образования'] = 'Other'
 
+    if education_encoder is None:
+        education_encoder = LabelEncoder()            #Создаем энкодер для строковых данных
+        education_encoder.fit(data['Вид образования'])
+
     #Переводим все строки в числа с помощью кодировщика
-    data['Вид образования'] = education_encoder.fit_transform(data['Вид образования'])
+    data['Вид образования'] = education_encoder.transform(data['Вид образования'])
     return data, education_encoder #Возвращаем данные и кодировщик
+
 
 #Функция которая извлекает и обрабатывает данные из файла Tasks.csv
 #Данные парсяться чтобы получить количество просроченных и не-просроченных задач каждого соотрудника
-def get_tasks_info(input_data):
+def get_tasks_info(input_data, tasks_encoder=None):
     #Берём только столбец 'Статус по просрочке' из этого датасета (остальные данные либо признаны не важными, либо слишком разбалансированные)
     #ПРИМЕЧАНИЕ - У нас примерно в 5 раз больше предметов с просрочкой чем без (Статус по просрочке)
-    tasks_encoder = LabelEncoder()
     #Позже столбец по просрочкам делится на два столбца - 'Просрочено' и 'Не Просрочено'
     #Для каждого работника мы суммируем количество просроченных и не-просроченных задач
     ALLOWED_COLUMNS = ['id', 'Not Lates', 'Lates']
 
     tasks_data = pd.read_csv('dataset/Tasks.csv', dtype='object') #Читаем датасет
 
-    lates_column = tasks_encoder.fit_transform(tasks_data['Статус по просрочке'].values) #Кодируем строки в числа (0 или 1 по сколько у нас две категории)
+    if tasks_encoder is None:
+        tasks_encoder = LabelEncoder()
+        tasks_encoder.fit(tasks_data['Статус по просрочке'].values) #Кодируем строки в числа (0 или 1 по сколько у нас две категории)
+
+    lates_column = tasks_encoder.transform(tasks_data['Статус по просрочке'].values)  # Кодируем строки в числа (0 или 1 по сколько у нас две категории)
     lates_column_categorical = OneHotEncoder(sparse=False).fit_transform(lates_column.reshape(-1, 1))  #Переводим числа в onehot вектор
     tasks_data['Not Lates'] = lates_column_categorical[:, 0] #Записываем все не просроченные задачи в один столбец (0 или 1)
     tasks_data['Lates'] = lates_column_categorical[:, 1]     #Записываем все просроченные задачи в другой столбец (0 или 1)
@@ -62,6 +70,7 @@ def get_tasks_info(input_data):
     data.fillna(-1, inplace=True)   #Везде где у нас нет данных на количество задач - записываем -1
 
     return data, tasks_encoder #Возвращаем данные и кодировщик
+
 
 #Функция которая извлекает и обрабатывает данные из файла SKUD.csv
 #Данная функция считает общее число часов учётом обедов и без для каждого соотрудника
@@ -80,6 +89,7 @@ def get_skud_data(input_data):
     data.fillna(-1, inplace=True)          #Записываем -1 туда, где нет данных
     return data
 
+
 def get_connection_data(input_data):
     ALLOWED_COLUMNS = ['id', 'Время опоздания', 'Признак опоздания']
     connection_data = pd.read_csv('dataset/ConnectionTime.csv', dtype=str)
@@ -93,6 +103,7 @@ def get_connection_data(input_data):
     data.fillna(-10, inplace=True)          #Записываем -10 туда, где нет данных
     return data
 
+
 def get_working_data(input_data):
     ALLOWED_COLUMNS = ['id', 'activeTime', 'monitorTime']
     working_data = pd.read_csv('dataset/WorkingDay.csv')
@@ -103,6 +114,7 @@ def get_working_data(input_data):
     data.fillna(-1e6, inplace=True)          #Записываем -1e6 туда, где нет данных
     return data
 
+
 def get_network_data(input_data):
     ALLOWED_COLUMNS = ['id', 'monitor_Time']
     network_data = pd.read_csv('dataset/TimenNetwork.csv')
@@ -111,6 +123,28 @@ def get_network_data(input_data):
     data = input_data.join(network_data, how='left')
     data.fillna(-1e6, inplace=True)          #Записываем -1e6 туда, где нет данных
     return input_data
+
+
+def get_calls_data(input_data):
+    #Берём только эти столбцы из датасета
+    ALLOWED_COLUMNS = ['id', 'NumberOfCalls', 'InOut', 'CallTime']
+    calls_data = pd.read_csv('dataset/Calls.csv', dtype=str)
+    calls_data = calls_data[ALLOWED_COLUMNS]
+
+    for number_column in ['NumberOfCalls', 'CallTime']:
+        calls_data[number_column] = calls_data[number_column].str.replace(',', '.').astype(float)
+
+    in_calls = calls_data[calls_data['InOut'] == 'ToUser']
+    out_calls = calls_data[calls_data['InOut'] == 'FromUser']
+
+    in_calls = in_calls.groupby('id').sum(numeric_only=True).rename({'NumberOfCalls': 'NumberOfInCalls', 'CallTime': 'InCallTime'}, axis=1)
+    out_calls = out_calls.groupby('id').sum(numeric_only=True).rename({'NumberOfCalls': 'NumberOfOutCalls', 'CallTime': 'OutCallTime'}, axis=1)
+
+    data = input_data.join(in_calls, how='left')
+    data = data.join(out_calls, how='left')
+    data.fillna(-1e2, inplace=True)          #Записываем -1e2 туда, где нет данных
+    return data
+
 
 #Главная функция файла - извлекает и обрабатывает все данные для обучения и валидации
 def get_train_dataset():
@@ -121,6 +155,7 @@ def get_train_dataset():
     train_data = get_connection_data(train_data)
     train_data = get_working_data(train_data)
     train_data = get_network_data(train_data)
+    train_data = get_calls_data(train_data)
 
     #Масштабирование скалярных значений (преведенье столбцов в ст. распределение)
     scaler = StandardScaler()
@@ -148,6 +183,40 @@ def get_train_dataset():
 
     x_train, x_val, y_train, y_val = train_test_split(x, y, train_size=train_size)
     return x_train, x_val, y_train, y_val, encoders, scaler
+
+
+def get_test_dataset(encoders, scaler):
+    test_data = pd.read_csv('dataset/test.csv', index_col='id')
+    test_data, _ = get_education_info(test_data, education_encoder=encoders['education_encoder'])
+    test_data, _ = get_tasks_info(test_data, tasks_encoder=encoders['tasks_encoder'])
+    test_data = get_skud_data(test_data)
+    test_data = get_connection_data(test_data)
+    test_data = get_working_data(test_data)
+    test_data = get_network_data(test_data)
+    test_data = get_calls_data(test_data)
+
+    if scale_data:
+        # Список всех столбцов которые подлежат скалированию
+        scalar_columns = ['Not Lates', 'Lates', 'Длительность общая', 'activeTime', 'monitorTime',
+                          'Длительность раб.дня без обеда', 'Время опоздания', 'Признак опоздания']
+
+        test_data[scalar_columns] = scaler.transform(test_data[scalar_columns]) #Скалируем выше-указанные столбцы
+
+    if onehot_encode:
+        categorical_columns = ['Вид образования']  # Список всех столбцов которые подлежат onehot кодированию
+        arrays_store = []
+        for column in categorical_columns:
+            onehot_data = OneHotEncoder(sparse=False).fit_transform(test_data[column].values.reshape(-1, 1))
+            arrays_store.append(onehot_data)
+        test_data.drop(categorical_columns, axis=1, inplace=True)
+
+    x_test, y_test = test_data.loc[:, test_data.columns != 'type'].values, test_data.loc[:, test_data.columns == 'type'].values
+
+    if onehot_encode:
+        x_test = np.concatenate([x_test] + arrays_store, axis=1)
+
+    return x_test, y_test
+
 
 #Код ниже используется для дебаггинга/проверки данных
 if __name__ == "__main__":
