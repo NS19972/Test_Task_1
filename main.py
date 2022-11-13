@@ -9,6 +9,7 @@ np.random.seed(seed)   #Устанавливаем сид (sklearn исполь�
 tf.random.set_seed(seed) #Устанавливаем сид для нейросетей
 
 if __name__ == "__main__":
+    st.title('Тестовое задание РАНХиГС')
     st.markdown(
         """
         #Прогноз перевода в должности сотрудников
@@ -19,27 +20,39 @@ if __name__ == "__main__":
     train_file = st.file_uploader("Загрузить обучающую выборку", key='upload_train_dataset', type=["csv"])
     test_file = st.file_uploader("Загрузить тестовую выборку", key='upload_test_dataset', type=["csv"])
 
-    possible_algorithms = st.selectbox("Выберите алгоритм для модели: ",
-                                ['Нейросеть', 'XGBoost', 'Гауссовский классификатор', 'SVM', 'Дерево Решений'],
-                                       key='algorithm_selection')
+    selected_algorithm = st.selectbox(
+        "Выберите алгоритм для модели: ",
+        ['Нейросеть', 'XGBoost', 'Гауссовский классификатор', 'SVM', 'Дерево Решений', 'Случайный Лес'],
+        key='algorithm_selection')
 
-    optuna_epochs = st.slider("Кол-во эпох для оптимизации алгоритма Оптуной (оставьте 0 чтобы не использовать Оптуну)", min_value=0, max_value=1000, value=0, key='optuna_box')
+    optuna_epochs = st.slider("Кол-во эпох для оптимизации алгоритма Оптуной (оставьте 0 чтобы не использовать Оптуну)",
+                              min_value=0, max_value=1000, value=0, key='optuna_box')
 
     train_button = st.button(label='Обучить', key='train_button')
 
     str_to_algorithm = {'Нейросеть': NeuralNetwork, 'XGBoost': GradientBoostingAlgorithm, 'SVM': SVMAlgorithm,
-                        'Дерево Решений': DecisionTreeAlgorithm, 'Гауссовский классификатор': GaussianAlgorithm}
+                        'Дерево Решений': DecisionTreeAlgorithm, 'Случайный Лес': RandomForestAlgorithm,
+                        'Гауссовский классификатор': GaussianAlgorithm}
+
+    scale_data = True if selected_algorithm == 'Нейросеть' else False
+    onehot_encode = True if selected_algorithm in ['Нейросеть', 'SVM'] else False
 
     if train_button:
-        x_train, x_val, y_train, y_val, encoders, scaler = get_train_dataset(train_file)  # Загружаем обработанный датасет
-        algorithm = str_to_algorithm[possible_algorithms]()
+        x_train, x_val, y_train, y_val, encoders, scaler = get_train_dataset(
+            train_file, scale_data=scale_data, onehot_encode=onehot_encode  # Загружаем обработанный датасет
+        )
+
+        algorithm = str_to_algorithm[selected_algorithm]()
         if optuna_epochs:
             optuna_optimization(algorithm, optuna_epochs)
         algorithm.train(x_train, y_train)  # Задаем параметры алгоритма
         val_score = algorithm.validate(x_val, y_val)
         st.text(f"Точность модели на валидационной выборке: {val_score}")
 
-        x_test, y_test = get_test_dataset(test_file, encoders, scaler)
+        x_test, y_test = get_test_dataset(
+            test_file, encoders, scaler, scale_data=scale_data, onehot_encode=onehot_encode
+        )
+
         test_score = algorithm.test(x_test, y_test)
         st.text(f"Точность модели на тестовой выборке: {test_score}")
 

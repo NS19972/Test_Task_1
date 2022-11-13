@@ -36,7 +36,20 @@ def analyze_calls_data(dataset):
     plt.show()
 
 def analyze_monitor_data(dataset):
-    dataset = dataset[['activeTime', 'monitorTime', 'monitor_Time']]
+    dataset = dataset[['activeTime', 'monitorTimeWorking', 'monitorTimeNetwork']]
+    colors_list = ['blue', 'green', 'orange']
+    fig, ax = plt.subplots(1, 3, figsize=(24, 8))
+    ax = ax.ravel()
+
+    for i, a in enumerate(ax):
+        a.hist(dataset.iloc[:, i], bins=200, color=colors_list[i], cumulative=True, alpha=0.5)
+        a.set_title(dataset.columns[i])
+        a.set_xlabel('Category Value')
+        a.set_ylabel('Number of Instances')
+        a.grid()
+
+    plt.tight_layout()
+    plt.show()
 
 
 if __name__ == "__main__":
@@ -49,4 +62,4 @@ if __name__ == "__main__":
     train_data = get_network_data(train_data)
     train_data = get_calls_data(train_data)
 
-    analyze_calls_data(train_data)
+    analyze_monitor_data(train_data)

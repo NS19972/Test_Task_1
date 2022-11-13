@@ -20,5 +20,7 @@ def optuna_optimization(algorithm, optimization_epochs):
         elif isinstance(algorithm, GaussianProcessClassifier):
             pass
 
-    study = optuna.create_study(direction="maximize", storage=optuna.storages.RDBStorage(url=f'sqlite:///optimization.db', engine_kwargs={"connect_args": {"timeout": 100}}))
+    study = optuna.create_study(direction="maximize", storage=optuna.storages.RDBStorage(
+        url=f'sqlite:///optimization.db', engine_kwargs={"connect_args": {"timeout": 100}})
+                                )
     study.optimize(objective_function, n_trials=optimization_epochs)

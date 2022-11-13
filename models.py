@@ -42,6 +42,10 @@ class DecisionTreeAlgorithm(GradientBoostingAlgorithm):
     def __init__(self):
         self.model = DecisionTreeClassifier()  # Создаем объект алгоритма DecisionTreeClassifier
 
+class RandomForestAlgorithm(GradientBoostingAlgorithm):
+    def __init__(self):
+        self.model = RandomForestClassifier
+
 class GaussianAlgorithm(GradientBoostingAlgorithm):
     def __init__(self):
         self.model = GaussianProcessClassifier()  # Создаем объект алгоритма Gaussian
@@ -49,9 +53,13 @@ class GaussianAlgorithm(GradientBoostingAlgorithm):
 
 class NeuralNetwork:
     def __init__(self):
-        self.model = tf.keras.Sequential(layers=[tf.keras.layers.Dense(i, activation='relu') for i in neural_network_hidden_neurons])
+        self.model = tf.keras.Sequential(
+            layers=[tf.keras.layers.Dense(i, activation='relu') for i in neural_network_hidden_neurons]
+        )
         self.model.add(tf.keras.layers.Dense(num_classes, activation='softmax'))
-        self.model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=NN_learning_rate), loss='sparse_categorical_crossentropy')
+        self.model.compile(
+            optimizer=tf.keras.optimizers.Adam(learning_rate=NN_learning_rate), loss='sparse_categorical_crossentropy'
+        )
 
     def train(self, x_train, y_train):
         class_weights = self.calculate_class_weights(y_train) if use_class_weights else None

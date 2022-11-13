@@ -141,8 +141,12 @@ def get_calls_data(input_data):
     in_calls = calls_data[calls_data['InOut'] == 'ToUser']
     out_calls = calls_data[calls_data['InOut'] == 'FromUser']
 
-    in_calls = in_calls.groupby('id').sum(numeric_only=True).rename({'NumberOfCalls': 'NumberOfInCalls', 'CallTime': 'InCallTime'}, axis=1)
-    out_calls = out_calls.groupby('id').sum(numeric_only=True).rename({'NumberOfCalls': 'NumberOfOutCalls', 'CallTime': 'OutCallTime'}, axis=1)
+    in_calls = in_calls.groupby('id').sum(numeric_only=True).rename(
+        {'NumberOfCalls': 'NumberOfInCalls', 'CallTime': 'InCallTime'}, axis=1
+    )
+    out_calls = out_calls.groupby('id').sum(numeric_only=True).rename(
+        {'NumberOfCalls': 'NumberOfOutCalls', 'CallTime': 'OutCallTime'}, axis=1
+    )
 
     data = input_data.join(in_calls, how='left')
     data = data.join(out_calls, how='left')
@@ -151,7 +155,8 @@ def get_calls_data(input_data):
 
 
 #Главная функция файла - извлекает и обрабатывает все данные для обучения и валидации
-def get_train_dataset(file):
+@st.cache
+def get_train_dataset(file, scale_data=False, onehot_encode=False):
     if file is not None:
         train_data = pd.read_csv(file, index_col='id')
         train_data, education_encoder = get_education_info(train_data)
@@ -180,7 +185,8 @@ def get_train_dataset(file):
                 arrays_store.append(onehot_data)
             train_data.drop(categorical_columns, axis=1, inplace=True)
 
-        x, y = train_data.loc[:, train_data.columns != 'type'].values, train_data.loc[:, train_data.columns == 'type'].values
+        x, y = train_data.loc[:, train_data.columns != 'type'].values, \
+               train_data.loc[:, train_data.columns == 'type'].values
 
         if onehot_encode:
             x = np.concatenate([x] + arrays_store, axis=1)
@@ -191,7 +197,8 @@ def get_train_dataset(file):
         return x_train, x_val, y_train, y_val, encoders, scaler
 
 
-def get_test_dataset(file, encoders, scaler):
+@st.cache
+def get_test_dataset(file, encoders, scaler, scale_data=False, onehot_encode=False):
     if file is not None:
         test_data = pd.read_csv('dataset/test.csv', index_col='id')
         test_data, _ = get_education_info(test_data, education_encoder=encoders['education_encoder'])
@@ -218,7 +225,8 @@ def get_test_dataset(file, encoders, scaler):
                 arrays_store.append(onehot_data)
             test_data.drop(categorical_columns, axis=1, inplace=True)
 
-        x_test, y_test = test_data.loc[:, test_data.columns != 'type'].values, test_data.loc[:, test_data.columns == 'type'].values
+        x_test, y_test = test_data.loc[:, test_data.columns != 'type'].values, \
+                         test_data.loc[:, test_data.columns == 'type'].values
 
         if onehot_encode:
             x_test = np.concatenate([x_test] + arrays_store, axis=1)
