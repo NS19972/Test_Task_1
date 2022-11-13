@@ -13,9 +13,9 @@ max_depth = 3          #Глубина деревьев
 neural_network_hidden_neurons = [32, 16, 8]
 NN_learning_rate = 1e-3
 num_epochs = 10
-use_class_weights = True
+use_class_weights = False
 batch_size = 32
 
 #Data Preprocessing
-scale_data = True     #Нужно ли скалировать данные?
-onehot_encode = True  #Нужно ли кодировать данные в One-Hot?
+scale_data = False     #Нужно ли скалировать данные?
+onehot_encode = False  #Нужно ли кодировать данные в One-Hot?
