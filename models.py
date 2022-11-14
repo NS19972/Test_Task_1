@@ -9,6 +9,7 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.metrics import recall_score
 from sklearn.svm import *
 from constants import *
+from misc_functions import *
 
 np.random.seed(seed)   #Устанавливаем сид (sklearn использует сид от numpy)
 
@@ -16,7 +17,7 @@ class GradientBoostingAlgorithm:
     def __init__(self, **kwargs):
         self.model = GradientBoostingClassifier(
             n_estimators=kwargs['n_estimators'], max_depth=kwargs['max_depth'],
-            learning_rate=kwargs['learning_rate'], min_samples_split = kwargs['min_samples_split']
+            learning_rate=kwargs['GB_learning_rate'], min_samples_split = kwargs['min_samples_split']
             )  # Задаем параметры алгоритма
 
     def train(self, x_train, y_train):
@@ -37,7 +38,7 @@ class GradientBoostingAlgorithm:
 
 class SVMAlgorithm(GradientBoostingAlgorithm):
     def __init__(self, **kwargs):
-        self.model = SVC(C = kwargs['C'], use_class_weights = kwargs['use_class_weights'], kernel = kwargs['kernel'])  # Создаем объект алгоритма SVC
+        self.model = SVC(C = kwargs['C'], class_weight = kwargs['class_weight'], kernel = kwargs['kernel'])  # Создаем объект алгоритма SVC
 
 
 #Практика показывает, что именно дерево решений достигает максимально высокой точности на тестовой выборке (~30%)
@@ -77,7 +78,7 @@ class NeuralNetwork:
         self.kwargs = kwargs
 
     def train(self, x_train, y_train):
-        class_weights = self.calculate_class_weights(y_train) if self.kwargs['use_class_weights'] else None
+        class_weights = calculate_class_weights(y_train) if self.kwargs['use_class_weights'] else None
         x_train = np.array(x_train, ndmin=2)
         y_train = np.array(y_train, ndmin=2)
         self.model.fit(x_train, y_train, epochs=self.kwargs['num_epochs'], batch_size=self.kwargs['batch_size'], class_weight=class_weights)
@@ -99,13 +100,6 @@ class NeuralNetwork:
         score = recall_score(y_test.flatten(), y_pred.flatten(), average='micro')
         print(f"Model recall score on test subset is {score}")
         return score
-
-    @classmethod
-    def calculate_class_weights(cls, y):
-        unique_categories, counts = np.unique(y, return_counts=True)
-        counts = counts/counts.sum()
-        weights_dict = {i: j for i, j in enumerate(counts)}
-        return weights_dict
 
     @classmethod
     def filter_zeros(cls, array):

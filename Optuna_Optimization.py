@@ -2,6 +2,7 @@ import optuna
 import tensorflow as tf
 import argparse
 from models import *
+from misc_functions import *
 
 
 def optuna_optimization(x_train, y_train, x_val, y_val, selected_algorithm, optimization_epochs):
