@@ -3,7 +3,7 @@ import streamlit as st
 from Data_Formation import get_train_dataset, get_test_dataset
 from Optuna_Optimization import optuna_optimization
 from models import *
-from constants import *
+from constants import kwargs
 
 np.random.seed(seed)   #Устанавливаем сид (sklearn использует сид от numpy)
 tf.random.set_seed(seed) #Устанавливаем сид для нейросетей
@@ -42,9 +42,9 @@ if __name__ == "__main__":
             train_file, scale_data=scale_data, onehot_encode=onehot_encode  # Загружаем обработанный датасет
         )
 
-        algorithm = str_to_algorithm[selected_algorithm]()
         if optuna_epochs:
-            optuna_optimization(algorithm, optuna_epochs)
+            kwargs = optuna_optimization(x_train, y_train, x_val, y_val, selected_algorithm, optuna_epochs)
+        algorithm = str_to_algorithm[selected_algorithm](**kwargs)
         algorithm.train(x_train, y_train)  # Задаем параметры алгоритма
         val_score = algorithm.validate(x_val, y_val)
         st.text(f"Точность модели на валидационной выборке: {val_score}")

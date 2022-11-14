@@ -13,8 +13,11 @@ from constants import *
 np.random.seed(seed)   #Устанавливаем сид (sklearn использует сид от numpy)
 
 class GradientBoostingAlgorithm:
-    def __init__(self):
-        self.model = GradientBoostingClassifier(n_estimators=40, max_depth=2)  # Задаем параметры алгоритма
+    def __init__(self, **kwargs):
+        self.model = GradientBoostingClassifier(
+            n_estimators=kwargs['n_estimators'], max_depth=kwargs['max_depth'],
+            learning_rate=kwargs['learning_rate'], min_samples_split = kwargs['min_samples_split']
+            )  # Задаем параметры алгоритма
 
     def train(self, x_train, y_train):
         self.model.fit(x_train, y_train.flatten())  # Обучаем алгоритм
@@ -33,44 +36,56 @@ class GradientBoostingAlgorithm:
 
 
 class SVMAlgorithm(GradientBoostingAlgorithm):
-    def __init__(self):
-        self.model = SVC()  # Создаем объект алгоритма SVC
+    def __init__(self, **kwargs):
+        self.model = SVC(C = kwargs['C'], use_class_weights = kwargs['use_class_weights'], kernel = kwargs['kernel'])  # Создаем объект алгоритма SVC
+
 
 #Практика показывает, что именно дерево решений достигает максимально высокой точности на тестовой выборке (~30%)
 #Однако при этом, точность на валидационной выборке значительно падает (до 46%)
 class DecisionTreeAlgorithm(GradientBoostingAlgorithm):
-    def __init__(self):
-        self.model = DecisionTreeClassifier()  # Создаем объект алгоритма DecisionTreeClassifier
+    def __init__(self, **kwargs):
+        self.model = DecisionTreeClassifier(max_depth = kwargs['max_depth'], criterion=kwargs['criterion'],
+                                            min_samples_split = kwargs['min_samples_split']
+                                            )  # Создаем объект алгоритма DecisionTreeClassifier
+
 
 class RandomForestAlgorithm(GradientBoostingAlgorithm):
-    def __init__(self):
-        self.model = RandomForestClassifier
+    def __init__(self, **kwargs):
+        self.model = RandomForestClassifier(n_estimators=kwargs['n_estimators'], max_depth=kwargs['max_depth'],
+                                            min_samples_split = kwargs['min_samples_split']
+                                            ) # Создаем объект алгоритма RandomForestClassifier
+
 
 class GaussianAlgorithm(GradientBoostingAlgorithm):
-    def __init__(self):
-        self.model = GaussianProcessClassifier()  # Создаем объект алгоритма Gaussian
+    def __init__(self, **kwargs):
+        self.model = GaussianProcessClassifier(max_iter_predict = kwargs['max_iter_predict'],
+                                               warm_start=kwargs['warm_start'])  # Создаем объект алгоритма Gaussian
 
 
 class NeuralNetwork:
-    def __init__(self):
+    def __init__(self, **kwargs):
+        neural_network_hidden_neurons = self.filter_zeros(kwargs['neural_network_hidden_neurons'])
+
         self.model = tf.keras.Sequential(
             layers=[tf.keras.layers.Dense(i, activation='relu') for i in neural_network_hidden_neurons]
         )
         self.model.add(tf.keras.layers.Dense(num_classes, activation='softmax'))
         self.model.compile(
-            optimizer=tf.keras.optimizers.Adam(learning_rate=NN_learning_rate), loss='sparse_categorical_crossentropy'
+            optimizer=tf.keras.optimizers.Adam(learning_rate=kwargs['NN_learning_rate']), loss='sparse_categorical_crossentropy'
         )
 
+        self.kwargs = kwargs
+
     def train(self, x_train, y_train):
-        class_weights = self.calculate_class_weights(y_train) if use_class_weights else None
+        class_weights = self.calculate_class_weights(y_train) if self.kwargs['use_class_weights'] else None
         x_train = np.array(x_train, ndmin=2)
         y_train = np.array(y_train, ndmin=2)
-        self.model.fit(x_train, y_train, epochs=num_epochs, batch_size=batch_size, class_weight=class_weights)
+        self.model.fit(x_train, y_train, epochs=self.kwargs['num_epochs'], batch_size=self.kwargs['batch_size'], class_weight=class_weights)
 
     def validate(self, x_val, y_val):
         x_val = np.array(x_val, ndmin=2)
         y_val = np.array(y_val, ndmin=2)
-        y_pred = self.model.predict(x_val, batch_size=batch_size)
+        y_pred = self.model.predict(x_val, batch_size=self.kwargs['batch_size'])
         y_pred = np.argmax(y_pred, axis=1)
         score = recall_score(y_val.flatten(), y_pred.flatten(), average='micro')
         print(f"Model recall score on validation subset is {score}")
@@ -91,3 +106,12 @@ class NeuralNetwork:
         counts = counts/counts.sum()
         weights_dict = {i: j for i, j in enumerate(counts)}
         return weights_dict
+
+    @classmethod
+    def filter_zeros(cls, array):
+        result = []
+        for i in array:
+            if i == 0:
+                break
+            result.append(i)
+        return result

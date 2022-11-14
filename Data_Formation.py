@@ -157,81 +157,79 @@ def get_calls_data(input_data):
 #Главная функция файла - извлекает и обрабатывает все данные для обучения и валидации
 @st.cache
 def get_train_dataset(file, scale_data=False, onehot_encode=False):
-    if file is not None:
-        train_data = pd.read_csv(file, index_col='id')
-        train_data, education_encoder = get_education_info(train_data)
-        train_data, tasks_encoder = get_tasks_info(train_data)
-        train_data = get_skud_data(train_data)
-        train_data = get_connection_data(train_data)
-        train_data = get_working_data(train_data)
-        train_data = get_network_data(train_data)
-        train_data = get_calls_data(train_data)
+    train_data = pd.read_csv(file, index_col='id')
+    train_data, education_encoder = get_education_info(train_data)
+    train_data, tasks_encoder = get_tasks_info(train_data)
+    train_data = get_skud_data(train_data)
+    train_data = get_connection_data(train_data)
+    train_data = get_working_data(train_data)
+    train_data = get_network_data(train_data)
+    train_data = get_calls_data(train_data)
 
-        #Масштабирование скалярных значений (преведенье столбцов в ст. распределение)
-        scaler = StandardScaler()
-        if scale_data:
-            # Список всех столбцов которые подлежат скалированию
-            scalar_columns = ['Not Lates', 'Lates', 'Длительность общая', 'activeTime', 'monitorTimeWorking',
-                              'monitorTimeNetwork', 'Длительность раб.дня без обеда', 'Время опоздания',
-                              'Признак опоздания', 'NumberOfInCalls', 'InCallTime', 'NumberOfOutCalls', 'OutCallTime']
+    #Масштабирование скалярных значений (преведенье столбцов в ст. распределение)
+    scaler = StandardScaler()
+    if scale_data:
+        # Список всех столбцов которые подлежат скалированию
+        scalar_columns = ['Not Lates', 'Lates', 'Длительность общая', 'activeTime', 'monitorTimeWorking',
+                          'monitorTimeNetwork', 'Длительность раб.дня без обеда', 'Время опоздания',
+                          'Признак опоздания', 'NumberOfInCalls', 'InCallTime', 'NumberOfOutCalls', 'OutCallTime']
 
-            train_data[scalar_columns] = scaler.fit_transform(train_data[scalar_columns]) #Скалируем выше-указанные столбцы
+        train_data[scalar_columns] = scaler.fit_transform(train_data[scalar_columns]) #Скалируем выше-указанные столбцы
 
-        if onehot_encode:
-            categorical_columns = ['Вид образования'] #Список всех столбцов которые подлежат onehot кодированию
-            arrays_store = []
-            for column in categorical_columns:
-                onehot_data = OneHotEncoder(sparse=False).fit_transform(train_data[column].values.reshape(-1, 1))
-                arrays_store.append(onehot_data)
-            train_data.drop(categorical_columns, axis=1, inplace=True)
+    if onehot_encode:
+        categorical_columns = ['Вид образования'] #Список всех столбцов которые подлежат onehot кодированию
+        arrays_store = []
+        for column in categorical_columns:
+            onehot_data = OneHotEncoder(sparse=False).fit_transform(train_data[column].values.reshape(-1, 1))
+            arrays_store.append(onehot_data)
+        train_data.drop(categorical_columns, axis=1, inplace=True)
 
-        x, y = train_data.loc[:, train_data.columns != 'type'].values, \
-               train_data.loc[:, train_data.columns == 'type'].values
+    x, y = train_data.loc[:, train_data.columns != 'type'].values, \
+           train_data.loc[:, train_data.columns == 'type'].values
 
-        if onehot_encode:
-            x = np.concatenate([x] + arrays_store, axis=1)
+    if onehot_encode:
+        x = np.concatenate([x] + arrays_store, axis=1)
 
-        encoders = {'education_encoder':education_encoder, 'tasks_encoder':tasks_encoder}
+    encoders = {'education_encoder':education_encoder, 'tasks_encoder':tasks_encoder}
 
-        x_train, x_val, y_train, y_val = train_test_split(x, y, train_size=train_size)
-        return x_train, x_val, y_train, y_val, encoders, scaler
+    x_train, x_val, y_train, y_val = train_test_split(x, y, train_size=train_size)
+    return x_train, x_val, y_train, y_val, encoders, scaler
 
 
 @st.cache
 def get_test_dataset(file, encoders, scaler, scale_data=False, onehot_encode=False):
-    if file is not None:
-        test_data = pd.read_csv('dataset/test.csv', index_col='id')
-        test_data, _ = get_education_info(test_data, education_encoder=encoders['education_encoder'])
-        test_data, _ = get_tasks_info(test_data, tasks_encoder=encoders['tasks_encoder'])
-        test_data = get_skud_data(test_data)
-        test_data = get_connection_data(test_data)
-        test_data = get_working_data(test_data)
-        test_data = get_network_data(test_data)
-        test_data = get_calls_data(test_data)
+    test_data = pd.read_csv('dataset/test.csv', index_col='id')
+    test_data, _ = get_education_info(test_data, education_encoder=encoders['education_encoder'])
+    test_data, _ = get_tasks_info(test_data, tasks_encoder=encoders['tasks_encoder'])
+    test_data = get_skud_data(test_data)
+    test_data = get_connection_data(test_data)
+    test_data = get_working_data(test_data)
+    test_data = get_network_data(test_data)
+    test_data = get_calls_data(test_data)
 
-        if scale_data:
-            # Список всех столбцов которые подлежат скалированию
-            scalar_columns = ['Not Lates', 'Lates', 'Длительность общая', 'activeTime', 'monitorTimeWorking',
-                              'monitorTimeNetwork', 'Длительность раб.дня без обеда', 'Время опоздания',
-                              'Признак опоздания', 'NumberOfInCalls', 'InCallTime', 'NumberOfOutCalls', 'OutCallTime']
+    if scale_data:
+        # Список всех столбцов которые подлежат скалированию
+        scalar_columns = ['Not Lates', 'Lates', 'Длительность общая', 'activeTime', 'monitorTimeWorking',
+                          'monitorTimeNetwork', 'Длительность раб.дня без обеда', 'Время опоздания',
+                          'Признак опоздания', 'NumberOfInCalls', 'InCallTime', 'NumberOfOutCalls', 'OutCallTime']
 
-            test_data[scalar_columns] = scaler.transform(test_data[scalar_columns]) #Скалируем выше-указанные столбцы
+        test_data[scalar_columns] = scaler.transform(test_data[scalar_columns]) #Скалируем выше-указанные столбцы
 
-        if onehot_encode:
-            categorical_columns = ['Вид образования']  # Список всех столбцов которые подлежат onehot кодированию
-            arrays_store = []
-            for column in categorical_columns:
-                onehot_data = OneHotEncoder(sparse=False).fit_transform(test_data[column].values.reshape(-1, 1))
-                arrays_store.append(onehot_data)
-            test_data.drop(categorical_columns, axis=1, inplace=True)
+    if onehot_encode:
+        categorical_columns = ['Вид образования']  # Список всех столбцов которые подлежат onehot кодированию
+        arrays_store = []
+        for column in categorical_columns:
+            onehot_data = OneHotEncoder(sparse=False).fit_transform(test_data[column].values.reshape(-1, 1))
+            arrays_store.append(onehot_data)
+        test_data.drop(categorical_columns, axis=1, inplace=True)
 
-        x_test, y_test = test_data.loc[:, test_data.columns != 'type'].values, \
-                         test_data.loc[:, test_data.columns == 'type'].values
+    x_test, y_test = test_data.loc[:, test_data.columns != 'type'].values, \
+                     test_data.loc[:, test_data.columns == 'type'].values
 
-        if onehot_encode:
-            x_test = np.concatenate([x_test] + arrays_store, axis=1)
+    if onehot_encode:
+        x_test = np.concatenate([x_test] + arrays_store, axis=1)
 
-        return x_test, y_test
+    return x_test, y_test
 
 
 #Код ниже используется для дебаггинга/проверки данных
