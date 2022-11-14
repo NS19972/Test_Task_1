@@ -24,7 +24,7 @@ def optuna_optimization(x_train, y_train, x_val, y_val, selected_algorithm, opti
             algorithm = NeuralNetwork(**kwargs)
 
         elif selected_algorithm.lower() == 'xgboost':
-            kwargs['learning_rate'] = trial.suggest_float('GB_learning_rate', 1e-2, 5e-1, log=True)
+            kwargs['GB_learning_rate'] = trial.suggest_float('GB_learning_rate', 1e-2, 5e-1, log=True)
             kwargs['n_estimators'] = trial.suggest_int('N_estimators', 10, 500, log=True)
             kwargs['max_depth'] = trial.suggest_int('max_depth', 1, 5)
             kwargs['min_samples_split'] = trial.suggest_int('min_samples_split', 2, 4)

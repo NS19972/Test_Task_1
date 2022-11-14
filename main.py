@@ -25,8 +25,27 @@ if __name__ == "__main__":
         ['Нейросеть', 'XGBoost', 'Гауссовский классификатор', 'SVM', 'Дерево Решений', 'Случайный Лес'],
         key='algorithm_selection')
 
-    optuna_epochs = st.slider("Кол-во эпох для оптимизации алгоритма Оптуной (оставьте 0 чтобы не использовать Оптуну)",
-                              min_value=0, max_value=1000, value=0, key='optuna_box')
+    with st.expander("Использовать автоматический подбор гиперпараметров"):
+        st.write("""
+            TPE (Tree-Structured Parzen Estimator) - алгоритм, который основан на Байесовских методах, и используется для подбора гиперпараметров.
+            Этот алгоритм способен автоматический перебирать комбинации гиперпараметров исользуя метод "проба и ошибок".
+            
+            Если Вы установите этот флажок, программа сама попытается подобрать оптимальный набор гиперпараметров.
+            В таком случае, все ранее Вами указанные значения гиперпараметров будут игнорированы.
+            
+        """)
+        use_optuna = st.checkbox("Использовать TPE для автоматического подбора гиперпараметров", key='use_optuna')
+
+        if use_optuna:
+            optuna_epochs = st.slider("Кол-во эпох для оптимизации алгоритма с помощью TPE (0 = не использовать автоматическую оптимизацию)",
+                              min_value=1, max_value=1000, value=100, key='optuna_epochs')
+
+            st.markdown("""
+                Рекомендуется использовать не меньше 100 эпох для оптимизации.
+                
+                **ПРИМЕЧАНИЕ: Программе может потребоваться много времени для выполнения большого количества эпох.**
+                """)
+
 
     train_button = st.button(label='Обучить', key='train_button')
 
@@ -42,7 +61,7 @@ if __name__ == "__main__":
             train_file, scale_data=scale_data, onehot_encode=onehot_encode  # Загружаем обработанный датасет
         )
 
-        if optuna_epochs:
+        if use_optuna:
             kwargs = optuna_optimization(x_train, y_train, x_val, y_val, selected_algorithm, optuna_epochs)
         algorithm = str_to_algorithm[selected_algorithm](**kwargs)
         algorithm.train(x_train, y_train)  # Задаем параметры алгоритма
