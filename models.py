@@ -14,7 +14,6 @@ np.random.seed(seed)   #Устанавливаем сид (sklearn исполь�
 
 class GradientBoostingAlgorithm:
     def __init__(self, **kwargs):
-        print(kwargs)
         self.model = GradientBoostingClassifier(
             n_estimators=kwargs['n_estimators'], max_depth=kwargs['GB_max_depth'],
             learning_rate=kwargs['GB_learning_rate'], min_samples_split = kwargs['min_samples_split']
