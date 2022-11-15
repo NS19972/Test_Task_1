@@ -25,14 +25,14 @@ def optuna_optimization(x_train, y_train, x_val, y_val, selected_algorithm, opti
 
         elif selected_algorithm.lower() == 'xgboost':
             kwargs['GB_learning_rate'] = trial.suggest_float('GB_learning_rate', 1e-2, 5e-1, log=True)
-            kwargs['n_estimators'] = trial.suggest_int('N_estimators', 10, 500, log=True)
+            kwargs['n_estimators'] = trial.suggest_int('n_estimators', 10, 500, log=True)
             kwargs['GB_max_depth'] = trial.suggest_int('GB_max_depth', 1, 5)
             kwargs['min_samples_split'] = trial.suggest_int('min_samples_split', 2, 4)
 
             algorithm = GradientBoostingAlgorithm(**kwargs)
 
         elif selected_algorithm.lower() == 'случайный лес':
-            kwargs['n_estimators'] = trial.suggest_int('N_estimators', 10, 500, log=True)
+            kwargs['n_estimators'] = trial.suggest_int('n_estimators', 10, 500, log=True)
             use_max_depth = trial.suggest_categorical('use_max_depth', [True, False])
             kwargs['Tree_max_depth'] = trial.suggest_int('Tree_max_depth', 1, 5) if use_max_depth else None
             kwargs['min_samples_split'] = trial.suggest_int('min_samples_split', 2, 4)
