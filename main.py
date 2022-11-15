@@ -4,6 +4,7 @@ from Data_Formation import get_train_dataset, get_test_dataset
 from Optuna_Optimization import optuna_optimization
 from models import *
 from constants import kwargs
+from misc_functions import *
 
 np.random.seed(seed)   #Устанавливаем сид (sklearn использует сид от numpy)
 tf.random.set_seed(seed) #Устанавливаем сид для нейросетей
@@ -97,6 +98,12 @@ if __name__ == "__main__":
 
         if use_optuna:
             kwargs = optuna_optimization(x_train, y_train, x_val, y_val, selected_algorithm, optuna_epochs)
+            if selected_algorithm == 'SVM':
+                kwargs['class_weight'] = calculate_class_weights(y_train)
+            elif selected_algorithm == 'Нейросеть':
+                kwargs['neural_network_hidden_neurons'] = [kwargs[f'layer_{i + 1}_size'] for i in
+                                                           range(kwargs['hidden_layers'])]
+
         algorithm = str_to_algorithm[selected_algorithm](**kwargs)
         algorithm.train(x_train, y_train)  # Задаем параметры алгоритма
         val_score = algorithm.validate(x_val, y_val)
