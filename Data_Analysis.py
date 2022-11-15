@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import seaborn as sns
 import os
 
 from Data_Formation import *
@@ -51,6 +52,13 @@ def analyze_monitor_data(dataset):
     plt.tight_layout()
     plt.show()
 
+def create_heatmap(dataset):
+    correlation_matrix = dataset.corr(method='spearman')
+    plt.figure(figsize=(14, 8))
+    sns.heatmap(correlation_matrix)
+    plt.title("Матрица корреляции")
+    plt.show()
+
 
 if __name__ == "__main__":
     train_data = pd.read_csv('dataset/train.csv', index_col='id')
@@ -62,4 +70,4 @@ if __name__ == "__main__":
     train_data = get_network_data(train_data)
     train_data = get_calls_data(train_data)
 
-    analyze_monitor_data(train_data)
+    create_heatmap(train_data)

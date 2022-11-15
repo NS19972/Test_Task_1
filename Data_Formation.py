@@ -26,6 +26,8 @@ def get_education_info(input_data, education_encoder=None):
 
     #ПРИМЕЧАНИЕ: некоторые категории очень редко встречаются в датасете - по этому мы их просто пометим как Other (другое)
     unique_categories, counts = np.unique(data['Вид образования'].astype(str).values, return_counts=True)  #Считаем как часто каждая категория встречается
+    unique_categories_2, counts_2 = np.unique(data['Специальность'].astype(str).values, return_counts=True)
+
     frequency_dict = dict(zip(unique_categories, counts))                                    #Создаем словарь из полученных категорий и сколько раз они встречаются
 
     #Переводим все редкие категории, а также категорию nan в Other
@@ -78,7 +80,7 @@ def get_tasks_info(input_data, tasks_encoder=None):
 #Данная функция считает общее число часов учётом обедов и без для каждого соотрудника
 def get_skud_data(input_data):
     #Берём только два новых столбца из этого файла: количество часов потраченных на работу с одебом и без обедов
-    ALLOWED_COLUMNS = ['id', 'Длительность общая', 'Длительность раб.дня без обеда']
+    ALLOWED_COLUMNS = ['id', 'Длительность общая']
     skud_data = pd.read_csv('dataset/SKUD.csv') #Читаем файл
     skud_data = skud_data[ALLOWED_COLUMNS]   #Берём только нужные столбцы
 
@@ -171,8 +173,8 @@ def get_train_dataset(file, scale_data=False, onehot_encode=False):
     if scale_data:
         # Список всех столбцов которые подлежат скалированию
         scalar_columns = ['Not Lates', 'Lates', 'Длительность общая', 'activeTime', 'monitorTimeWorking',
-                          'monitorTimeNetwork', 'Длительность раб.дня без обеда', 'Время опоздания',
-                          'Признак опоздания', 'NumberOfInCalls', 'InCallTime', 'NumberOfOutCalls', 'OutCallTime']
+                          'monitorTimeNetwork', 'Время опоздания', 'Признак опоздания', 'NumberOfInCalls',
+                          'InCallTime', 'NumberOfOutCalls', 'OutCallTime']
 
         train_data[scalar_columns] = scaler.fit_transform(train_data[scalar_columns]) #Скалируем выше-указанные столбцы
 
@@ -210,8 +212,8 @@ def get_test_dataset(file, encoders, scaler, scale_data=False, onehot_encode=Fal
     if scale_data:
         # Список всех столбцов которые подлежат скалированию
         scalar_columns = ['Not Lates', 'Lates', 'Длительность общая', 'activeTime', 'monitorTimeWorking',
-                          'monitorTimeNetwork', 'Длительность раб.дня без обеда', 'Время опоздания',
-                          'Признак опоздания', 'NumberOfInCalls', 'InCallTime', 'NumberOfOutCalls', 'OutCallTime']
+                          'monitorTimeNetwork', 'Время опоздания', 'Признак опоздания', 'NumberOfInCalls',
+                          'InCallTime', 'NumberOfOutCalls', 'OutCallTime']
 
         test_data[scalar_columns] = scaler.transform(test_data[scalar_columns]) #Скалируем выше-указанные столбцы
 
