@@ -34,14 +34,14 @@ def optuna_optimization(x_train, y_train, x_val, y_val, selected_algorithm, opti
         elif selected_algorithm.lower() == 'случайный лес':
             kwargs['n_estimators'] = trial.suggest_int('N_estimators', 10, 500, log=True)
             use_max_depth = trial.suggest_categorical('use_max_depth', [True, False])
-            kwargs['max_depth'] = trial.suggest_int('max_depth', 1, 5) if use_max_depth else None
+            kwargs['Tree_max_depth'] = trial.suggest_int('Tree_max_depth', 1, 5) if use_max_depth else None
             kwargs['min_samples_split'] = trial.suggest_int('min_samples_split', 2, 4)
 
             algorithm = RandomForestAlgorithm(**kwargs)
 
         elif selected_algorithm.lower() == 'дерево решений':
             use_max_depth = trial.suggest_categorical('use_max_depth', [True, False])
-            kwargs['Decision_tree_max_depth'] = trial.suggest_int('Decision_tree_max_depth', 1, 5) if use_max_depth else None
+            kwargs['Tree_max_depth'] = trial.suggest_int('Tree_max_depth', 1, 5) if use_max_depth else None
             kwargs['criterion'] = trial.suggest_categorical('criterion', ['gini', 'entropy', 'log_loss'])
             kwargs['min_samples_split'] = trial.suggest_int('min_samples_split', 2, 4)
 
