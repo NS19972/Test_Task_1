@@ -26,7 +26,6 @@ def get_education_info(input_data, education_encoder=None):
 
     #ПРИМЕЧАНИЕ: некоторые категории очень редко встречаются в датасете - по этому мы их просто пометим как Other (другое)
     unique_categories, counts = np.unique(data['Вид образования'].astype(str).values, return_counts=True)  #Считаем как часто каждая категория встречается
-    unique_categories_2, counts_2 = np.unique(data['Специальность'].astype(str).values, return_counts=True)
 
     frequency_dict = dict(zip(unique_categories, counts))                                    #Создаем словарь из полученных категорий и сколько раз они встречаются
 
