@@ -99,7 +99,7 @@ if __name__ == "__main__":
         if use_optuna:
             kwargs = optuna_optimization(x_train, y_train, x_val, y_val, selected_algorithm, optuna_epochs)
             if selected_algorithm == 'SVM':
-                kwargs['class_weight'] = calculate_class_weights(y_train)
+                kwargs['class_weight'] = calculate_class_weights(y_train) if kwargs['use_class_weights'] else None
             elif selected_algorithm == 'Нейросеть':
                 kwargs['neural_network_hidden_neurons'] = [kwargs[f'layer_{i + 1}_size'] for i in
                                                            range(kwargs['hidden_layers'])]

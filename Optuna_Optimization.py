@@ -50,7 +50,8 @@ def optuna_optimization(x_train, y_train, x_val, y_val, selected_algorithm, opti
         elif selected_algorithm.lower() == 'svm':
             kwargs['C'] = trial.suggest_float('C', 0.5, 2)
             kwargs['use_class_weights'] = trial.suggest_categorical('use_class_weights', [True, False])
-            kwargs['kernel'] = trial.suggest_categorical('kernel', ['linear', 'poly', 'rbf', 'sigmoid', 'precomputed'])
+            kwargs['class_weight'] = calculate_class_weights(y_train) if kwargs['use_class_weights'] else None
+            kwargs['kernel'] = trial.suggest_categorical('kernel', ['poly', 'rbf', 'sigmoid'])
 
             algorithm = SVMAlgorithm(**kwargs)
 
