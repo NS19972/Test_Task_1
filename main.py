@@ -39,7 +39,7 @@ if __name__ == "__main__":
         num_neurons = []
         kwargs['hidden_layers'] = st.slider("Количество скрытых слоев", min_value=0, max_value=5, value=2)
         for i in range(kwargs['hidden_layers']):
-            num_neurons.append(st.slider(f'Количество нейронов в {i+1}-m слое', min_value=1, max_value=256, value=32))
+            num_neurons.append(st.slider(f'Количество нейронов в {i+1}-m слое', min_value=4, max_value=64, value=32))
         kwargs['neural_network_hidden_neurons'] = num_neurons
 
         kwargs['num_epochs'] = st.slider("Эпохи обучения", min_value=1, max_value=10, value=5)
