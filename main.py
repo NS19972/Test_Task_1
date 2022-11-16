@@ -41,7 +41,7 @@ if __name__ == "__main__":
         kwargs['GB_max_depth'] = st.slider("Макс. глубина деревьев", min_value=1, max_value=5, value=3)
         learning_rate = st.slider('Скорость обучения', min_value=0.0, max_value=1.0, value=0.5)
         kwargs['GB_learning_rate'] = 10 ** (2 * learning_rate - 2)
-        kwargs['min_samples_split'] = st.slider('Минимальное кол-во для сплита', min_value=2, max_value=5, value=2)
+        kwargs['min_samples_split'] = st.slider('Минимальное кол-во данных для сплита', min_value=2, max_value=5, value=2)
 
     elif selected_algorithm == possible_algorithms[1]: #Нейросеть
         num_neurons = []
@@ -111,7 +111,7 @@ if __name__ == "__main__":
 
     train_button = st.button(label='Обучить', key='train_button',
                              disabled=True if not train_file else False,
-                             on_click=callback)
+                             on_click=train_buttons_callback)
 
     str_to_algorithm = {'Нейросеть': NeuralNetwork, 'XGBoost': GradientBoostingAlgorithm, 'SVM': SVMAlgorithm,
                         'Дерево Решений': DecisionTreeAlgorithm, 'Случайный Лес': RandomForestAlgorithm,
@@ -152,12 +152,12 @@ if __name__ == "__main__":
         st.info(f"Точность модели на валидационной выборке: {round(100*st.session_state.val_score, 3)}%")
 
         test_file = st.file_uploader("Загрузите тестовую выборку", key='upload_test_dataset', type=["csv"],
-                                     on_change=callback_2)
+                                     on_change=test_buttons_callback)
         st.markdown("---")
 
         test_button = st.button(label='Тестировать', key='test_button',
                              disabled=True if not test_file else False,
-                                on_click=callback_2)
+                                on_click=test_buttons_callback)
 
         if test_button:
             x_test, y_test = get_test_dataset(

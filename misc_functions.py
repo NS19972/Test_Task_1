@@ -17,9 +17,9 @@ def select_columns(file):
                        )
     return file, dataset_columns
 
-def callback():
+def train_buttons_callback():
     st.session_state.train_button_clicked = True
     st.session_state.model_trained = False
 
-def callback_2():
+def test_buttons_callback():
     st.session_state.train_button_clicked = True
