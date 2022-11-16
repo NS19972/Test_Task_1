@@ -5,6 +5,7 @@ import os
 
 from Data_Formation import *
 
+
 def analyze_class_frequency(dataset):
     def func(pct):
         return "{:1.1f}%".format(pct)
@@ -16,6 +17,7 @@ def analyze_class_frequency(dataset):
     plt.pie(counts, labels = [f"Class {i}" for i in range(len(counts))], autopct=lambda pct: func(pct))
     plt.title("Относительное количество каждого класса в выборке")
     plt.show()
+
 
 #Данная функция выводит КУМУЛЯТИВНЫЕ гистограммы
 #Именно кумулятивные гистограммы нам показывают, что почти все данные для всех столбцов находяться около нуля
@@ -36,6 +38,7 @@ def analyze_calls_data(dataset):
     plt.tight_layout()
     plt.show()
 
+
 def analyze_monitor_data(dataset):
     dataset = dataset[['activeTime', 'monitorTimeWorking', 'monitorTimeNetwork']]
     colors_list = ['blue', 'green', 'orange']
@@ -52,22 +55,24 @@ def analyze_monitor_data(dataset):
     plt.tight_layout()
     plt.show()
 
+
 def create_heatmap(dataset):
     correlation_matrix = dataset.corr(method='spearman')
     plt.figure(figsize=(14, 8))
-    sns.heatmap(correlation_matrix)
+    sns.heatmap(correlation_matrix, annot=True)
     plt.title("Матрица корреляции")
     plt.show()
 
 
 if __name__ == "__main__":
     train_data = pd.read_csv('dataset/train.csv', index_col='id')
-    train_data, education_encoder = get_education_info(train_data)
     train_data, tasks_encoder = get_tasks_info(train_data)
     train_data = get_skud_data(train_data)
     train_data = get_connection_data(train_data)
     train_data = get_working_data(train_data)
     train_data = get_network_data(train_data)
     train_data = get_calls_data(train_data)
+    train_data = get_education_info(train_data)
+    train_data, _ = process_education_info(train_data)
 
     create_heatmap(train_data)

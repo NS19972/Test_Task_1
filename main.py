@@ -1,6 +1,6 @@
 import streamlit as st
 
-from Data_Formation import get_train_dataset, get_test_dataset
+from Data_Formation import get_train_dataset, get_test_dataset, get_dataframe
 from Optuna_Optimization import optuna_optimization
 from models import *
 from constants import kwargs
@@ -17,6 +17,15 @@ if __name__ == "__main__":
         """
     )
     st.image('title_image.jpg')
+
+    st.write("Данное приложение дает возможность создать собственный алгоритм для прогноза будущих карьерных перспектив"
+             "сотрудника компании. Вы можете выбрать любой алгоритм из списка предоставленных, а также, при желании, "
+             "Вы сможете самостоятельно подбирать гиперпараметры для выбранного Вами алгоритма.")
+
+
+    st.write("Чтобы обучить алгоритм, необходимо загрузить файл с id сотрудников и их карьерных данных в обучающую"
+             "выборку, и также загрузить аналогичный файл в качестве тестовой выборки. Затем, нужно нажать на кнопку "
+             "'Обучить'.")
 
     train_file = st.file_uploader("Загрузите обучающую выборку", key='upload_train_dataset', type=["csv"])
     st.markdown("---")
@@ -95,7 +104,8 @@ if __name__ == "__main__":
                 """)
 
 
-    train_button = st.button(label='Обучить', key='train_button')
+    train_button = st.button(label='Обучить', key='train_button',
+                             disabled=True if not train_file or not test_file else False)
 
     str_to_algorithm = {'Нейросеть': NeuralNetwork, 'XGBoost': GradientBoostingAlgorithm, 'SVM': SVMAlgorithm,
                         'Дерево Решений': DecisionTreeAlgorithm, 'Случайный Лес': RandomForestAlgorithm,
@@ -103,9 +113,18 @@ if __name__ == "__main__":
 
     scale_data = True if selected_algorithm == 'Нейросеть' else False
     onehot_encode = True if selected_algorithm in ['Нейросеть', 'SVM'] else False
-    if train_button and train_file is not None and test_file is not None:
+
+    if train_file is not None:
+        train_dataframe, tasks_encoder = get_dataframe(train_file)
+        train_dataframe.drop("type", axis=1, inplace=True)
+        dataset_columns = st.sidebar.multiselect("Выберите столбцы для обучения нейросети",
+                       options=train_dataframe.columns.values, default=train_dataframe.columns.values
+                       )
+
+    if train_button:
+        train_dataframe = train_dataframe[dataset_columns]
         x_train, x_val, y_train, y_val, encoders, scaler = get_train_dataset(
-            train_file, scale_data=scale_data, onehot_encode=onehot_encode  # Загружаем обработанный датасет
+            train_dataframe, tasks_encoder, scale_data=scale_data, onehot_encode=onehot_encode  # Загружаем обработанный датасет
         )
 
         if use_optuna:
@@ -122,7 +141,7 @@ if __name__ == "__main__":
         st.info(f"Точность модели на валидационной выборке: {round(100*val_score, 3)}%")
 
         x_test, y_test = get_test_dataset(
-            test_file, encoders, scaler, scale_data=scale_data, onehot_encode=onehot_encode
+            test_file, dataset_columns, encoders, scaler, scale_data=scale_data, onehot_encode=onehot_encode
         )
 
         test_score = algorithm.test(x_test, y_test)

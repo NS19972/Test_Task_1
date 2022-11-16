@@ -12,7 +12,7 @@ np.random.seed(seed)   #Устанавливаем сид (sklearn исполь�
 
 #Функция которая извлекает и обрабатывает данные из файла Education.csv
 #Данные парсяться чтобы получить категорию образования соотрудника, которая отображается в виде числа
-def get_education_info(input_data, education_encoder=None):
+def get_education_info(input_data):
     ALLOWED_COLUMNS = ['id', 'Вид образования']   #Исключаем данные о специальности, т.к. там слишком много категорий
 
     education_data = pd.read_csv('dataset/Education.csv') #Читаем файл
@@ -22,8 +22,10 @@ def get_education_info(input_data, education_encoder=None):
     education_data.set_index('id', inplace=True)          #Устанавливаем столбец 'id' как индексовый
 
     data = input_data.join(education_data, how='left')    #Делаем left join чтобы добавить данные только по тем соотрудникам, которые есть в train/test
+    data.fillna("Нет данных", inplace=True)
+    return data #Возвращаем данные и кодировщик
 
-
+def process_education_info(data, education_encoder=None):
     #ПРИМЕЧАНИЕ: некоторые категории очень редко встречаются в датасете - по этому мы их просто пометим как Other (другое)
     unique_categories, counts = np.unique(data['Вид образования'].astype(str).values, return_counts=True)  #Считаем как часто каждая категория встречается
 
@@ -40,8 +42,7 @@ def get_education_info(input_data, education_encoder=None):
 
     #Переводим все строки в числа с помощью кодировщика
     data['Вид образования'] = education_encoder.transform(data['Вид образования'])
-    return data, education_encoder #Возвращаем данные и кодировщик
-
+    return data, education_encoder
 
 #Функция которая извлекает и обрабатывает данные из файла Tasks.csv
 #Данные парсяться чтобы получить количество просроченных и не-просроченных задач каждого соотрудника
@@ -70,7 +71,7 @@ def get_tasks_info(input_data, tasks_encoder=None):
     tasks_data = tasks_data.groupby('id').sum()
 
     data = input_data.join(tasks_data, how='left') #Стоит отметить - из-за join появляются NaN-ы по сколько не для всех работников есть данные
-    data.fillna(-1, inplace=True)   #Везде где у нас нет данных на количество задач - записываем -1
+    data.fillna(0, inplace=True)   #Везде где у нас нет данных на количество задач - записываем 0
 
     return data, tasks_encoder #Возвращаем данные и кодировщик
 
@@ -154,19 +155,22 @@ def get_calls_data(input_data):
     data.fillna(0, inplace=True)          #Записываем 0 туда, где нет данных
     return data
 
+def get_dataframe(file):
+    data = pd.read_csv(file, index_col='id')
+    data, tasks_encoder = get_tasks_info(data)
+    data = get_skud_data(data)
+    data = get_connection_data(data)
+    data = get_working_data(data)
+    data = get_network_data(data)
+    data = get_calls_data(data)
+    data = get_education_info(data)
+    return data, tasks_encoder
 
 #Главная функция файла - извлекает и обрабатывает все данные для обучения и валидации
 @st.cache
-def get_train_dataset(file, scale_data=False, onehot_encode=False):
-    train_data = pd.read_csv(file, index_col='id')
-    train_data, education_encoder = get_education_info(train_data)
-    train_data, tasks_encoder = get_tasks_info(train_data)
-    train_data = get_skud_data(train_data)
-    train_data = get_connection_data(train_data)
-    train_data = get_working_data(train_data)
-    train_data = get_network_data(train_data)
-    train_data = get_calls_data(train_data)
-
+def get_train_dataset(train_data, tasks_encoder, scale_data=False, onehot_encode=False):
+    #train_data, tasks_encoder = get_dataframe(file)
+    train_data, education_encoder = process_education_info(train_data)
     #Масштабирование скалярных значений (преведенье столбцов в ст. распределение)
     scaler = StandardScaler()
     if scale_data:
@@ -175,7 +179,9 @@ def get_train_dataset(file, scale_data=False, onehot_encode=False):
                           'monitorTimeNetwork', 'Время опоздания', 'Признак опоздания', 'NumberOfInCalls',
                           'InCallTime', 'NumberOfOutCalls', 'OutCallTime']
 
-        train_data[scalar_columns] = scaler.fit_transform(train_data[scalar_columns]) #Скалируем выше-указанные столбцы
+        common_columns = [i for i in train_data.columns.values if i in scalar_columns]
+
+        train_data[common_columns] = scaler.fit_transform(train_data[common_columns]) #Скалируем выше-указанные столбцы
 
     if onehot_encode:
         categorical_columns = ['Вид образования'] #Список всех столбцов которые подлежат onehot кодированию
@@ -198,23 +204,28 @@ def get_train_dataset(file, scale_data=False, onehot_encode=False):
 
 
 @st.cache
-def get_test_dataset(file, encoders, scaler, scale_data=False, onehot_encode=False):
-    test_data = pd.read_csv('dataset/test.csv', index_col='id')
-    test_data, _ = get_education_info(test_data, education_encoder=encoders['education_encoder'])
+def get_test_dataset(file, dataset_columns, encoders, scaler, scale_data=False, onehot_encode=False):
+    test_data = pd.read_csv(file, index_col='id')
     test_data, _ = get_tasks_info(test_data, tasks_encoder=encoders['tasks_encoder'])
     test_data = get_skud_data(test_data)
     test_data = get_connection_data(test_data)
     test_data = get_working_data(test_data)
     test_data = get_network_data(test_data)
     test_data = get_calls_data(test_data)
+    test_data = get_education_info(test_data)
 
+    test_data, _ = process_education_info(test_data, education_encoder=encoders['education_encoder'])
+
+    test_data = test_data[dataset_columns]
     if scale_data:
         # Список всех столбцов которые подлежат скалированию
         scalar_columns = ['Not Lates', 'Lates', 'Длительность общая', 'activeTime', 'monitorTimeWorking',
                           'monitorTimeNetwork', 'Время опоздания', 'Признак опоздания', 'NumberOfInCalls',
                           'InCallTime', 'NumberOfOutCalls', 'OutCallTime']
 
-        test_data[scalar_columns] = scaler.transform(test_data[scalar_columns]) #Скалируем выше-указанные столбцы
+        common_columns = [i for i in test_data.columns.values if i in scalar_columns]
+
+        test_data[common_columns] = scaler.transform(test_data[common_columns]) #Скалируем выше-указанные столбцы
 
     if onehot_encode:
         categorical_columns = ['Вид образования']  # Список всех столбцов которые подлежат onehot кодированию
