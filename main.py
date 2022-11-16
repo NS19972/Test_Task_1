@@ -5,6 +5,7 @@ from Optuna_Optimization import optuna_optimization
 from models import *
 from constants import kwargs
 from misc_functions import *
+from datetime import datetime
 
 np.random.seed(seed)   #Устанавливаем сид (sklearn использует сид от numpy)
 tf.random.set_seed(seed) #Устанавливаем сид для нейросетей
@@ -29,22 +30,20 @@ if __name__ == "__main__":
 
     train_file = st.file_uploader("Загрузите обучающую выборку", key='upload_train_dataset', type=["csv"])
     st.markdown("---")
-    test_file = st.file_uploader("Загрузите тестовую выборку", key='upload_test_dataset', type=["csv"])
-    st.markdown("---")
 
     possible_algorithms = ['XGBoost', 'Нейросеть', 'Гауссовский классификатор', 'SVM', 'Дерево Решений', 'Случайный Лес']
     selected_algorithm = st.selectbox(
         "Выберите алгоритм для модели: ", possible_algorithms, key='selected_algorithm')
 
     st.write("Настройте гиперпараметры для модели:")
-    if selected_algorithm == possible_algorithms[0]:
+    if selected_algorithm == possible_algorithms[0]:  #XGBoost
         kwargs['n_estimators'] = st.slider("Число деревьев решений", min_value=1, max_value=200, value=100)
         kwargs['GB_max_depth'] = st.slider("Макс. глубина деревьев", min_value=1, max_value=5, value=3)
         learning_rate = st.slider('Скорость обучения', min_value=0.0, max_value=1.0, value=0.5)
         kwargs['GB_learning_rate'] = 10 ** (2 * learning_rate - 2)
         kwargs['min_samples_split'] = st.slider('Минимальное кол-во для сплита', min_value=2, max_value=5, value=2)
 
-    elif selected_algorithm == possible_algorithms[1]:
+    elif selected_algorithm == possible_algorithms[1]: #Нейросеть
         num_neurons = []
         kwargs['hidden_layers'] = st.slider("Число скрытых слоев", min_value=0, max_value=5, value=2)
         for i in range(kwargs['hidden_layers']):
@@ -58,24 +57,24 @@ if __name__ == "__main__":
         kwargs['use_class_weights'] = st.checkbox('Приоритизировать более редкие классы в обучении',
                                                   key='class_weights_checkbox')
 
-    elif selected_algorithm == possible_algorithms[2]:
+    elif selected_algorithm == possible_algorithms[2]:  #Гауссовский классификатор
         kwargs['max_iter_predict'] = st.slider("Максимальное число итераций", min_value=10, max_value=500, value=100)
         kwargs['warm_start'] = st.checkbox("Использовать 'тёплое' начало (игнорируйте если не знаете что это такое")
 
-    elif selected_algorithm == possible_algorithms[3]:
+    elif selected_algorithm == possible_algorithms[3]:  #SVM
         kwargs['C'] = st.slider("Регуляризация", min_value=0.1, max_value=5.0, value=1.0)
         kwargs['use_class_weights'] = st.checkbox('Приоритизировать более редкие классы в обучении',
                                                   key='class_weights_checkbox')
         kwargs['kernel'] = st.selectbox("Ядро", ['poly', 'rbf', 'sigmoid'])
 
-    elif selected_algorithm == possible_algorithms[4]:
+    elif selected_algorithm == possible_algorithms[4]:  #Дерево Решений
         max_depth = st.slider("Максимальная глубина дерева (0 = нет ограничений)", min_value=0, max_value=10, value=0)
         kwargs['Tree_max_depth'] = max_depth if max_depth > 0 else None
         kwargs['min_samples_split'] = st.slider("Минимальное число сэмплов для деления дерева", min_value=2,
                                                 max_value=5, value=2)
         kwargs['criterion'] = st.selectbox("Функция ошибки", ['gini', 'entropy', 'log_loss'])
 
-    elif selected_algorithm == possible_algorithms[5]:
+    elif selected_algorithm == possible_algorithms[5]:  #Случайный Лес
         kwargs['n_estimators'] = st.slider("Количество деревьев решений", min_value=1, max_value=200, value=100, step=1)
         max_depth = st.slider("Максимальная глубина дерева (0 = нет ограничений)", min_value=0, max_value=10, value=0)
         kwargs['Tree_max_depth'] = max_depth if max_depth > 0 else None
@@ -89,8 +88,8 @@ if __name__ == "__main__":
             
             Если Вы установите этот флажок, программа сама попытается подобрать оптимальный набор гиперпараметров.
             В таком случае, все ранее Вами указанные значения гиперпараметров будут игнорированы.
-            
         """)
+
         use_optuna = st.checkbox("Использовать TPE для автоматического подбора гиперпараметров", key='use_optuna')
 
         if use_optuna:
@@ -103,9 +102,16 @@ if __name__ == "__main__":
                 **ПРИМЕЧАНИЕ: Программе может потребоваться много времени для выполнения большого количества эпох.**
                 """)
 
+    if 'train_button_clicked' not in st.session_state: #Используем session_state чтобы запомнить нажатье кнопки
+        st.session_state.train_button_clicked = False  #Пока что на кнопку не нажали, по этому инициализируем False
+    if 'model_trained' not in st.session_state:
+        st.session_state.model_trained = False
+    if 'algorithm' not in st.session_state:
+        st.session_state.algorithm = None
 
     train_button = st.button(label='Обучить', key='train_button',
-                             disabled=True if not train_file or not test_file else False)
+                             disabled=True if not train_file else False,
+                             on_click=callback)
 
     str_to_algorithm = {'Нейросеть': NeuralNetwork, 'XGBoost': GradientBoostingAlgorithm, 'SVM': SVMAlgorithm,
                         'Дерево Решений': DecisionTreeAlgorithm, 'Случайный Лес': RandomForestAlgorithm,
@@ -115,37 +121,51 @@ if __name__ == "__main__":
     onehot_encode = True if selected_algorithm in ['Нейросеть', 'SVM'] else False
 
     if train_file is not None:
+        label_columns = ['type']
         train_dataframe, tasks_encoder = get_dataframe(train_file)
-        train_dataframe.drop("type", axis=1, inplace=True)
+        possible_columns = [i for i in train_dataframe.columns.values if i not in label_columns]
         dataset_columns = st.sidebar.multiselect("Выберите столбцы для обучения нейросети",
-                       options=train_dataframe.columns.values, default=train_dataframe.columns.values
+                       options=possible_columns, default=possible_columns
                        )
 
-    if train_button:
+        dataset_columns += label_columns
+
+    if st.session_state.train_button_clicked:
         train_dataframe = train_dataframe[dataset_columns]
         x_train, x_val, y_train, y_val, encoders, scaler = get_train_dataset(
             train_dataframe, tasks_encoder, scale_data=scale_data, onehot_encode=onehot_encode  # Загружаем обработанный датасет
         )
 
-        if use_optuna:
-            kwargs = optuna_optimization(x_train, y_train, x_val, y_val, selected_algorithm, optuna_epochs)
-            if selected_algorithm == 'SVM':
-                kwargs['class_weight'] = calculate_class_weights(y_train) if kwargs['use_class_weights'] else None
-            elif selected_algorithm == 'Нейросеть':
-                kwargs['neural_network_hidden_neurons'] = [kwargs[f'layer_{i + 1}_size'] for i in
-                                                           range(kwargs['hidden_layers'])]
 
-        algorithm = str_to_algorithm[selected_algorithm](**kwargs)
-        algorithm.train(x_train, y_train)  # Задаем параметры алгоритма
-        val_score = algorithm.validate(x_val, y_val)
-        st.info(f"Точность модели на валидационной выборке: {round(100*val_score, 3)}%")
+        if not st.session_state.model_trained:
+            if use_optuna:
+                kwargs = optuna_optimization(x_train, y_train, x_val, y_val, selected_algorithm, optuna_epochs)
+                if selected_algorithm == 'SVM':
+                    kwargs['class_weight'] = calculate_class_weights(y_train) if kwargs['use_class_weights'] else None
+                elif selected_algorithm == 'Нейросеть':
+                    kwargs['neural_network_hidden_neurons'] = [kwargs[f'layer_{i + 1}_size'] for i in
+                                                               range(kwargs['hidden_layers'])]
+            st.session_state.algorithm = str_to_algorithm[selected_algorithm](**kwargs)
+            st.session_state.algorithm.train(x_train, y_train)  # Задаем параметры алгоритма
+            st.session_state.val_score = st.session_state.algorithm.validate(x_val, y_val)
+            st.session_state.model_trained = True
+        st.info(f"Точность модели на валидационной выборке: {round(100*st.session_state.val_score, 3)}%")
 
-        x_test, y_test = get_test_dataset(
-            test_file, dataset_columns, encoders, scaler, scale_data=scale_data, onehot_encode=onehot_encode
-        )
+        test_file = st.file_uploader("Загрузите тестовую выборку", key='upload_test_dataset', type=["csv"],
+                                     on_change=callback_2)
+        st.markdown("---")
 
-        test_score = algorithm.test(x_test, y_test)
-        st.info(f"Точность модели на тестовой выборке: {round(100*test_score, 3)}%")
+        test_button = st.button(label='Тестировать', key='test_button',
+                             disabled=True if not test_file else False,
+                                on_click=callback_2)
+
+        if test_button:
+            x_test, y_test = get_test_dataset(
+                test_file, dataset_columns, encoders, scaler, scale_data=scale_data, onehot_encode=onehot_encode
+            )
+
+            test_score = st.session_state.algorithm.test(x_test, y_test)
+            st.info(f"Точность модели на тестовой выборке: {round(100*test_score, 3)}%")
     st.caption("Автор: Никита Серов")
 
 

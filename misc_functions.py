@@ -16,3 +16,10 @@ def select_columns(file):
                        options=train_dataframe.columns.values, default=train_dataframe.columns.values
                        )
     return file, dataset_columns
+
+def callback():
+    st.session_state.train_button_clicked = True
+    st.session_state.model_trained = False
+
+def callback_2():
+    st.session_state.train_button_clicked = True
