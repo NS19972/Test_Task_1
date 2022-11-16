@@ -29,37 +29,49 @@ if __name__ == "__main__":
 
     st.write("Настройте гиперпараметры для модели:")
     if selected_algorithm == possible_algorithms[0]:
-        kwargs['n_estimators'] = st.slider("Количество деревьев решений", min_value=1, max_value=200, value=100)
+        kwargs['n_estimators'] = st.slider("Число деревьев решений", min_value=1, max_value=200, value=100)
         kwargs['GB_max_depth'] = st.slider("Макс. глубина деревьев", min_value=1, max_value=5, value=3)
         learning_rate = st.slider('Скорость обучения', min_value=0.0, max_value=1.0, value=0.5)
-        kwargs['GB_learning_rate'] = 10 ** (2*learning_rate - 2)
+        kwargs['GB_learning_rate'] = 10 ** (2 * learning_rate - 2)
         kwargs['min_samples_split'] = st.slider('Минимальное кол-во для сплита', min_value=2, max_value=5, value=2)
 
     elif selected_algorithm == possible_algorithms[1]:
         num_neurons = []
-        kwargs['hidden_layers'] = st.slider("Количество скрытых слоев", min_value=0, max_value=5, value=2)
+        kwargs['hidden_layers'] = st.slider("Число скрытых слоев", min_value=0, max_value=5, value=2)
         for i in range(kwargs['hidden_layers']):
-            num_neurons.append(st.slider(f'Количество нейронов в {i+1}-m слое', min_value=4, max_value=64, value=32))
+            num_neurons.append(st.slider(f'Число нейронов в {i + 1}-m слое', min_value=4, max_value=64, value=32))
         kwargs['neural_network_hidden_neurons'] = num_neurons
 
         kwargs['num_epochs'] = st.slider("Эпохи обучения", min_value=1, max_value=10, value=5)
-        learning_rate = st.slider('Скорость обучения', min_value = 0.0, max_value=1.0, value = 0.5)
+        learning_rate = st.slider('Скорость обучения', min_value=0.0, max_value=1.0, value=0.5)
         kwargs['NN_learning_rate'] = 10 ** (4 * learning_rate - 5)
-        kwargs['batch_size'] = st.slider('Размер батча', min_value = 8, max_value=256, value = 32, step=4)
+        kwargs['batch_size'] = st.slider('Размер пакета', min_value=16, max_value=256, value=32)
+        kwargs['use_class_weights'] = st.checkbox('Приоритизировать более редкие классы в обучении',
+                                                  key='class_weights_checkbox')
 
     elif selected_algorithm == possible_algorithms[2]:
-        pass
+        kwargs['max_iter_predict'] = st.slider("Максимальное число итераций", min_value=10, max_value=500, value=100)
+        kwargs['warm_start'] = st.checkbox("Использовать 'тёплое' начало (игнорируйте если не знаете что это такое")
 
     elif selected_algorithm == possible_algorithms[3]:
-        pass
+        kwargs['C'] = st.slider("Регуляризация", min_value=0.1, max_value=5.0, value=1.0)
+        kwargs['use_class_weights'] = st.checkbox('Приоритизировать более редкие классы в обучении',
+                                                  key='class_weights_checkbox')
+        kwargs['kernel'] = st.selectbox("Ядро", ['poly', 'rbf', 'sigmoid'])
 
     elif selected_algorithm == possible_algorithms[4]:
-        pass
+        max_depth = st.slider("Максимальная глубина дерева (0 = нет ограничений)", min_value=0, max_value=10, value=0)
+        kwargs['Tree_max_depth'] = max_depth if max_depth > 0 else None
+        kwargs['min_samples_split'] = st.slider("Минимальное число сэмплов для деления дерева", min_value=2,
+                                                max_value=5, value=2)
+        kwargs['criterion'] = st.selectbox("Функция ошибки", ['gini', 'entropy', 'log_loss'])
 
     elif selected_algorithm == possible_algorithms[5]:
         kwargs['n_estimators'] = st.slider("Количество деревьев решений", min_value=1, max_value=200, value=100, step=1)
-
-
+        max_depth = st.slider("Максимальная глубина дерева (0 = нет ограничений)", min_value=0, max_value=10, value=0)
+        kwargs['Tree_max_depth'] = max_depth if max_depth > 0 else None
+        kwargs['min_samples_split'] = st.slider("Минимальное число сэмплов для деления дерева", min_value=2,
+                                                max_value=5, value=2)
 
     with st.expander("Использовать автоматический подбор гиперпараметров"):
         st.write("""
