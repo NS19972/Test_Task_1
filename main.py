@@ -175,27 +175,36 @@ if __name__ == "__main__":
             sst.algorithm = str_to_algorithm[selected_algorithm](**kwargs)
             sst.algorithm.train(x_train, y_train)  # Задаем параметры алгоритма
 
+            # Валидируем на обучающей выборке
             sst.train_score = sst.algorithm.validate(x_train, y_train)
+            # Валидируем на валидационной выборке (только если у нас есть валидационная выборка)
             sst.val_score = sst.algorithm.validate(x_val, y_val) if val_percentage > 0 else None
+
+            # Устанавливаем флажок, который сообщает что модель уже обучена (чтобы не обучать дважды)
             sst.model_trained = True
+
+        #Выводим точности на обучающей и валидационной выборки в стримлит
         st.info(f"Точность модели на обучающей выборке: {round(100*sst.train_score, 3)}%")
         if val_percentage > 0 and sst.val_score is not None:
             st.info(f"Точность модели на валидационной выборке: {round(100*sst.val_score, 3)}%")
 
+        #Создаем загрузщик для тестового файла
         test_file = st.file_uploader("Загрузите тестовую выборку", key='upload_test_dataset', type=["csv"],
                                      on_change=upload_test_dataset)
         st.markdown("---")
 
+        #Кнопка для теста
         test_button = st.button(label='Тестировать', key='test_button',
                              disabled=True if not test_file else False,
                                 on_click=test_buttons_callback)
 
-        if test_button:
-            x_test, y_test = get_test_dataset(
+        if test_button: #Когда нажимаем на тестовую кнопку:
+            x_test, y_test = get_test_dataset(  #Собираем тестовый датасет используя кодировщики из обучающей
                 test_file, dataset_columns, encoders, scaler, scale_data=scale_data, onehot_encode=onehot_encode
             )
 
-            test_score = sst.algorithm.test(x_test, y_test)
+            test_score = sst.algorithm.test(x_test, y_test) #Тестируем
+            # Выводим точность на тестовой выборке в стримлит
             st.info(f"Точность модели на тестовой выборке: {round(100*test_score, 3)}%")
     st.caption("Автор: Никита Серов")
 
