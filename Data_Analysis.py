@@ -57,7 +57,6 @@ def analyze_monitor_data(dataset):
     plt.tight_layout()
     plt.show()
 
-@st.cache
 def create_heatmap(dataset):
     correlation_matrix = dataset.corr(method='spearman')
     plt.figure(figsize=(14, 8))
@@ -65,7 +64,6 @@ def create_heatmap(dataset):
     plt.title("Матрица корреляции")
     plt.show()
 
-@st.cache
 def create_heatmap_streamlit(dataset):
     correlation_matrix = dataset.corr(method='spearman')
     fig, ax = plt.subplots(figsize=(14, 8))

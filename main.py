@@ -137,12 +137,16 @@ if __name__ == "__main__":
         #Составляем список всех столбцов, которые можно выбирать или не выбирать.
         #В этот список не попадают столбцы из label_columns
         possible_columns = [i for i in train_dataframe.columns.values if i not in label_columns]
-        dataset_columns = st.sidebar.multiselect("Выберите столбцы для обучения нейросети",
+        if 'dataset_columns' not in sst:
+            sst.dataset_columns = possible_columns + label_columns
+        selected_columns = st.sidebar.multiselect("Выберите столбцы для обучения нейросети",
                        key='select_dataset_columns', options=possible_columns, default=possible_columns,
                        )
 
-        #Добавляем label_columns обратно в датасет
-        dataset_columns += label_columns
+        select_columns_button = st.sidebar.button("Выбрать указанные столбцы", key='select_columns_button')
+        st.sidebar.markdown('---')
+        if select_columns_button:
+            sst.dataset_columns = selected_columns + label_columns #Добавляем label_columns обратно в датасет
 
         #Доля валидационной выборки от общей обучающей+валидационной выборки
         val_percentage = st.sidebar.slider("Доля валидационной выборки от общего датасета",
@@ -151,11 +155,11 @@ if __name__ == "__main__":
         #Кнопка для формирования и вывода матрицы корреляции
         draw_heatmap = st.sidebar.button(label="Вывести матрицу корреляций", key='heatmap_button')
         if draw_heatmap:
-            create_heatmap_streamlit(train_dataframe[dataset_columns]) #Функция для вывода матрицы корреляции
+            create_heatmap_streamlit(train_dataframe[sst.dataset_columns]) #Функция для вывода матрицы корреляции
 
     #При нажатии на кпонку "Обучение"
     if sst.train_button_clicked:
-        train_dataframe = train_dataframe[dataset_columns] #Обрабатываем датасет и формируем x, y для val и train
+        train_dataframe = train_dataframe[sst.dataset_columns] #Обрабатываем датасет и формируем x, y для val и train
         x_train, x_val, y_train, y_val, encoders, scaler = get_train_dataset(
             train_dataframe, tasks_encoder, val_percentage=val_percentage,  # Загружаем обработанный датасет
             scale_data=scale_data, onehot_encode=onehot_encode
@@ -200,7 +204,7 @@ if __name__ == "__main__":
 
         if test_button: #Когда нажимаем на тестовую кнопку:
             x_test, y_test = get_test_dataset(  #Собираем тестовый датасет используя кодировщики из обучающей
-                test_file, dataset_columns, encoders, scaler, scale_data=scale_data, onehot_encode=onehot_encode
+                test_file, sst.dataset_columns, encoders, scaler, scale_data=scale_data, onehot_encode=onehot_encode
             )
 
             test_score = sst.algorithm.test(x_test, y_test) #Тестируем
