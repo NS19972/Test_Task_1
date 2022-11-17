@@ -6,7 +6,7 @@ import os
 
 from Data_Formation import *
 
-
+@st.cache
 def analyze_class_frequency(dataset):
     def func(pct):
         return "{:1.1f}%".format(pct)
@@ -23,6 +23,7 @@ def analyze_class_frequency(dataset):
 #Данная функция выводит КУМУЛЯТИВНЫЕ гистограммы
 #Именно кумулятивные гистограммы нам показывают, что почти все данные для всех столбцов находяться около нуля
 #Примерно половина данных имеют нулевые значения (от части из-за того, что nan-ы заполняются нулями)
+@st.cache
 def analyze_calls_data(dataset):
     dataset = dataset[['NumberOfInCalls', 'InCallTime', 'NumberOfOutCalls', 'OutCallTime']]
     colors_list = ['blue', 'red', 'green', 'orange']
@@ -39,7 +40,7 @@ def analyze_calls_data(dataset):
     plt.tight_layout()
     plt.show()
 
-
+@st.cache
 def analyze_monitor_data(dataset):
     dataset = dataset[['activeTime', 'monitorTimeWorking', 'monitorTimeNetwork']]
     colors_list = ['blue', 'green', 'orange']
@@ -56,7 +57,7 @@ def analyze_monitor_data(dataset):
     plt.tight_layout()
     plt.show()
 
-
+@st.cache
 def create_heatmap(dataset):
     correlation_matrix = dataset.corr(method='spearman')
     plt.figure(figsize=(14, 8))

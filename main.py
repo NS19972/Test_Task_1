@@ -29,13 +29,13 @@ if __name__ == "__main__":
              "выборку, и также загрузить аналогичный файл в качестве тестовой выборки. Затем, нужно нажать на кнопку "
              "'Обучить'.")
 
-    train_file = st.file_uploader("Загрузите обучающую выборку", key='upload_train_dataset', type=["csv"],
-                                  on_change=upload_train_dataset)
+    train_file = st.file_uploader("Загрузите обучающую выборку", key='upload_train_dataset', type=["csv"])
     st.markdown("---")
 
     possible_algorithms = ['XGBoost', 'Нейросеть', 'Гауссовский классификатор', 'SVM', 'Дерево Решений', 'Случайный Лес']
     selected_algorithm = st.selectbox(
-        "Выберите алгоритм для модели: ", possible_algorithms, key='selected_algorithm', on_change=selected_algorithm)
+        "Выберите алгоритм для модели: \n (примечание: модель нужно обучать заново после изменения набора столбцов)",
+        possible_algorithms, key='selected_algorithm', on_change=selected_algorithm)
 
     st.write("Настройте гиперпараметры для модели:")
     if selected_algorithm == possible_algorithms[0]:  #XGBoost
@@ -92,76 +92,91 @@ if __name__ == "__main__":
             В таком случае, все ранее Вами указанные значения гиперпараметров будут игнорированы.
         """)
 
+        #Возможность использовать Оптуну для подбора гипепараметров
         use_optuna = st.checkbox("Использовать TPE для автоматического подбора гиперпараметров", key='use_optuna')
 
         if use_optuna:
             optuna_epochs = st.slider("Кол-во эпох для оптимизации алгоритма с помощью TPE (0 = не использовать автоматическую оптимизацию)",
-                              min_value=1, max_value=1000, value=100, key='optuna_epochs')
+                              min_value=1, max_value=1000, value=50, key='optuna_epochs')
 
             st.markdown("""
-                Рекомендуется использовать не меньше 100 эпох для оптимизации.
+                Рекомендуется использовать не меньше 50 эпох для оптимизации.
                 
-                **ПРИМЕЧАНИЕ: Программе может потребоваться много времени для выполнения большого количества эпох.**
-                """)
+                **ПРИМЕЧАНИЕ: Программе может потребоваться много времени для выполнения большого количества эпох.**""")
 
-    if 'train_button_clicked' not in sst: #Используем session_state чтобы запомнить нажатье кнопки
-        sst.train_button_clicked = False  #Пока что на кнопку не нажали, по этому инициализируем False
+            st.markdown("""
+                Также учтите, что TPE только подбирает параметры для выбранного Вами алгоритма модели. 
+                Сам алгоритм нужно выбирать выше, в ручную.""")
+
+    # Используем session_state чтобы запомнить нажатье различных кнопок
+    if 'train_button_clicked' not in sst:
+        sst.train_button_clicked = False #Нужно, чтобы можно было нажать на кнопку "тестировать" после обучения
     if 'model_trained' not in sst:
-        sst.model_trained = False
+        sst.model_trained = False  #Нужно, чтобы не обучать модель заново при нажатии кнопки "тестировать"
     if 'algorithm' not in sst:
-        sst.algorithm = None
-    if 'encode_train_data' not in sst:
-        sst.encode_train_data = True
-    if 'encode_test_data' not in sst:
-        sst.encode_test_data = True
+        sst.algorithm = None       #Нужно, чтобы запомнить алгоритм и его веса после обучения перед тестированием
 
+    #Кнопка для обучения алгоритма
     train_button = st.button(label='Обучить', key='train_button',
                              disabled=True if not train_file else False,
                              on_click=train_buttons_callback)
 
+    #Словарь который переводит введеную строку в класс заданного алгоритма
     str_to_algorithm = {'Нейросеть': NeuralNetwork, 'XGBoost': GradientBoostingAlgorithm, 'SVM': SVMAlgorithm,
                         'Дерево Решений': DecisionTreeAlgorithm, 'Случайный Лес': RandomForestAlgorithm,
                         'Гауссовский классификатор': GaussianAlgorithm}
 
-    scale_data = True if selected_algorithm == 'Нейросеть' else False
-    onehot_encode = True if selected_algorithm in ['Нейросеть', 'SVM'] else False
+    scale_data = True if selected_algorithm == 'Нейросеть' else False #Скалирование данных нужно только для нейросети
+    onehot_encode = True if selected_algorithm in ['Нейросеть', 'SVM'] else False #OHE нужно только для нейросети и SVC
 
+    #Окно с возможностью выбора столбцов вылезает при загрузки обучающей выборки
     if train_file is not None:
-        label_columns = ['type']
-        train_dataframe, tasks_encoder = get_dataframe(train_file)
+        label_columns = ['type'] #Список всех столбцов, которые подаются в y_train/y_test (всего один такой столбец)
+        train_dataframe, tasks_encoder = get_dataframe(train_file) #Извлекаем все возможные столбцы из датасета
+
+        #Составляем список всех столбцов, которые можно выбирать или не выбирать.
+        #В этот список не попадают столбцы из label_columns
         possible_columns = [i for i in train_dataframe.columns.values if i not in label_columns]
         dataset_columns = st.sidebar.multiselect("Выберите столбцы для обучения нейросети",
                        key='select_dataset_columns', options=possible_columns, default=possible_columns,
-                                                 on_change=select_dataset_columns
                        )
+
+        #Добавляем label_columns обратно в датасет
         dataset_columns += label_columns
 
+        #Доля валидационной выборки от общей обучающей+валидационной выборки
+        val_percentage = st.slider("Доля валидационной выборки от общего датасета",
+                                   min_value=0.0, max_value=0.9, value=0.2)
+
+        #Кнопка для формирования и вывода матрицы корреляции
         draw_heatmap = st.sidebar.button(label="Вывести матрицу корреляций", key='heatmap_button')
         if draw_heatmap:
-            create_heatmap_streamlit(train_dataframe[dataset_columns])
+            create_heatmap_streamlit(train_dataframe[dataset_columns]) #Функция для вывода матрицы корреляции
 
+    #При нажатии на кпонку "Обучение"
     if sst.train_button_clicked:
-        if sst.encode_train_data:
-            train_dataframe = train_dataframe[dataset_columns]
-            sst.x_train, sst.x_val, sst.y_train, sst.y_val, sst.encoders, sst.scaler = get_train_dataset(
-                train_dataframe, tasks_encoder, scale_data=scale_data, onehot_encode=onehot_encode  # Загружаем обработанный датасет
-            )
-            sst.encode_train_data = False
-            st.write(train_dataframe)
+        train_dataframe = train_dataframe[dataset_columns] #Обрабатываем датасет и формируем x, y для val и train
+        x_train, x_val, y_train, y_val, encoders, scaler = get_train_dataset(
+            train_dataframe, tasks_encoder, scale_data=scale_data, onehot_encode=onehot_encode  # Загружаем обработанный датасет
+        )
 
-
+        #Если модель ранее не была обучена:
+        # (условие нужно, чтобы модель не обучалась заново при нажатии нерелевантных кнопок)
         if not sst.model_trained:
             if use_optuna:
-                kwargs = optuna_optimization(sst.x_train, sst.y_train, sst.x_val, sst.y_val, selected_algorithm, optuna_epochs)
+                kwargs = optuna_optimization(x_train, y_train, x_val, y_val, selected_algorithm, optuna_epochs)
                 if selected_algorithm == 'SVM':
-                    kwargs['class_weight'] = calculate_class_weights(sst.y_train) if kwargs['use_class_weights'] else None
+                    kwargs['class_weight'] = calculate_class_weights(y_train) if kwargs['use_class_weights'] else None
                 elif selected_algorithm == 'Нейросеть':
                     kwargs['neural_network_hidden_neurons'] = [kwargs[f'layer_{i + 1}_size'] for i in
                                                                range(kwargs['hidden_layers'])]
             sst.algorithm = str_to_algorithm[selected_algorithm](**kwargs)
-            sst.algorithm.train(sst.x_train, sst.y_train)  # Задаем параметры алгоритма
-            sst.val_score = sst.algorithm.validate(sst.x_val, sst.y_val)
+            sst.algorithm.train(x_train, y_train)  # Задаем параметры алгоритма
+
+            sst.train_score = sst.algorithm.validate(x_train, y_train)
+            sst.val_score = sst.algorithm.validate(x_val, y_val)
             sst.model_trained = True
+        st.info(f"Точность модели на обучающей выборке: {round(100*sst.train_score, 3)}%")
         st.info(f"Точность модели на валидационной выборке: {round(100*sst.val_score, 3)}%")
 
         test_file = st.file_uploader("Загрузите тестовую выборку", key='upload_test_dataset', type=["csv"],
@@ -173,14 +188,12 @@ if __name__ == "__main__":
                                 on_click=test_buttons_callback)
 
         if test_button:
-            if sst.encode_test_data:
-                sst.x_test, sst.y_test = get_test_dataset(
-                    test_file, dataset_columns, sst.encoders, sst.scaler, scale_data=scale_data, onehot_encode=onehot_encode
-                )
+            x_test, y_test = get_test_dataset(
+                test_file, dataset_columns, encoders, scaler, scale_data=scale_data, onehot_encode=onehot_encode
+            )
 
-            test_score = sst.algorithm.test(sst.x_test, sst.y_test)
+            test_score = sst.algorithm.test(x_test, y_test)
             st.info(f"Точность модели на тестовой выборке: {round(100*test_score, 3)}%")
-            sst.encode_test_data = False
     st.caption("Автор: Никита Серов")
 
 

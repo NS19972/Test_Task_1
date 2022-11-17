@@ -26,22 +26,10 @@ def test_buttons_callback():
     sst.train_button_clicked = True
 
 def upload_test_dataset():
-    sst.encode_test_data = True
     sst.train_button_clicked = True
 
-def upload_train_dataset():
-    sst.encode_train_data = True
-
 def selected_algorithm():
-    sst.encode_train_data = True
-    sst.encode_test_data = True
     sst.model_trained = False
 
 def selected_algorithm():
-    sst.encode_train_data = True
-    sst.encode_test_data = True
     sst.model_trained = False
-
-def select_dataset_columns():
-    sst.encode_train_data = True
-    sst.encode_test_data = True
