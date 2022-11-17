@@ -30,6 +30,3 @@ def upload_test_dataset():
 
 def selected_algorithm():
     sst.model_trained = False
-
-def selected_algorithm():
-    sst.model_trained = False

@@ -35,7 +35,7 @@ if __name__ == "__main__":
     possible_algorithms = ['XGBoost', 'Нейросеть', 'Гауссовский классификатор', 'SVM', 'Дерево Решений', 'Случайный Лес']
     selected_algorithm = st.selectbox(
         "Выберите алгоритм для модели: \n (примечание: модель нужно обучать заново после изменения набора столбцов)",
-        possible_algorithms, key='selected_algorithm', on_change=selected_algorithm)
+        possible_algorithms, key='selected_algorithm')
 
     st.write("Настройте гиперпараметры для модели:")
     if selected_algorithm == possible_algorithms[0]:  #XGBoost
@@ -145,7 +145,7 @@ if __name__ == "__main__":
         dataset_columns += label_columns
 
         #Доля валидационной выборки от общей обучающей+валидационной выборки
-        val_percentage = st.slider("Доля валидационной выборки от общего датасета",
+        val_percentage = st.sidebar.slider("Доля валидационной выборки от общего датасета",
                                    min_value=0.0, max_value=0.9, value=0.2)
 
         #Кнопка для формирования и вывода матрицы корреляции
@@ -157,14 +157,16 @@ if __name__ == "__main__":
     if sst.train_button_clicked:
         train_dataframe = train_dataframe[dataset_columns] #Обрабатываем датасет и формируем x, y для val и train
         x_train, x_val, y_train, y_val, encoders, scaler = get_train_dataset(
-            train_dataframe, tasks_encoder, scale_data=scale_data, onehot_encode=onehot_encode  # Загружаем обработанный датасет
+            train_dataframe, tasks_encoder, val_percentage=val_percentage,  # Загружаем обработанный датасет
+            scale_data=scale_data, onehot_encode=onehot_encode
         )
 
         #Если модель ранее не была обучена:
         # (условие нужно, чтобы модель не обучалась заново при нажатии нерелевантных кнопок)
         if not sst.model_trained:
-            if use_optuna:
+            if use_optuna:  #Оптимизация кода оптуной
                 kwargs = optuna_optimization(x_train, y_train, x_val, y_val, selected_algorithm, optuna_epochs)
+                #Блок кода, который обнавляет значения в kwargs в зависимости от полученного результата из Оптуны
                 if selected_algorithm == 'SVM':
                     kwargs['class_weight'] = calculate_class_weights(y_train) if kwargs['use_class_weights'] else None
                 elif selected_algorithm == 'Нейросеть':
@@ -174,10 +176,11 @@ if __name__ == "__main__":
             sst.algorithm.train(x_train, y_train)  # Задаем параметры алгоритма
 
             sst.train_score = sst.algorithm.validate(x_train, y_train)
-            sst.val_score = sst.algorithm.validate(x_val, y_val)
+            sst.val_score = sst.algorithm.validate(x_val, y_val) if val_percentage > 0 else None
             sst.model_trained = True
         st.info(f"Точность модели на обучающей выборке: {round(100*sst.train_score, 3)}%")
-        st.info(f"Точность модели на валидационной выборке: {round(100*sst.val_score, 3)}%")
+        if val_percentage > 0 and sst.val_score is not None:
+            st.info(f"Точность модели на валидационной выборке: {round(100*sst.val_score, 3)}%")
 
         test_file = st.file_uploader("Загрузите тестовую выборку", key='upload_test_dataset', type=["csv"],
                                      on_change=upload_test_dataset)

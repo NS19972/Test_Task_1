@@ -12,7 +12,6 @@ np.random.seed(seed)   #Устанавливаем сид (sklearn исполь�
 
 #Функция которая извлекает и обрабатывает данные из файла Education.csv
 #Данные парсяться чтобы получить категорию образования соотрудника, которая отображается в виде числа
-@st.cache
 def get_education_info(input_data):
     ALLOWED_COLUMNS = ['id', 'Вид образования']   #Исключаем данные о специальности, т.к. там слишком много категорий
 
@@ -26,7 +25,6 @@ def get_education_info(input_data):
     data.fillna("Нет данных", inplace=True)
     return data #Возвращаем данные и кодировщик
 
-@st.cache
 def process_education_info(data, education_encoder=None):
     #ПРИМЕЧАНИЕ: некоторые категории очень редко встречаются в датасете - по этому мы их просто пометим как Other (другое)
     unique_categories, counts = np.unique(data['Вид образования'].astype(str).values, return_counts=True)  #Считаем как часто каждая категория встречается
@@ -48,7 +46,6 @@ def process_education_info(data, education_encoder=None):
 
 #Функция которая извлекает и обрабатывает данные из файла Tasks.csv
 #Данные парсяться чтобы получить количество просроченных и не-просроченных задач каждого соотрудника
-@st.cache
 def get_tasks_info(input_data, tasks_encoder=None):
     #Берём только столбец 'Статус по просрочке' из этого датасета (остальные данные либо признаны не важными, либо слишком разбалансированные)
     #ПРИМЕЧАНИЕ - У нас примерно в 5 раз больше предметов с просрочкой чем без (Статус по просрочке)
@@ -81,7 +78,6 @@ def get_tasks_info(input_data, tasks_encoder=None):
 
 #Функция которая извлекает и обрабатывает данные из файла SKUD.csv
 #Данная функция считает общее число часов учётом обедов и без для каждого соотрудника
-@st.cache
 def get_skud_data(input_data):
     #Берём только два новых столбца из этого файла: количество часов потраченных на работу с одебом и без обедов
     ALLOWED_COLUMNS = ['id', 'Длительность общая']
@@ -97,7 +93,6 @@ def get_skud_data(input_data):
     data.fillna(0, inplace=True)          #Записываем 0 туда, где нет данных
     return data
 
-@st.cache
 def get_connection_data(input_data):
     ALLOWED_COLUMNS = ['id', 'Время опоздания', 'Признак опоздания']
     connection_data = pd.read_csv('dataset/ConnectionTime.csv', dtype=str)
@@ -111,7 +106,6 @@ def get_connection_data(input_data):
     data.fillna(0, inplace=True)          #Записываем 0 туда, где нет данных
     return data
 
-@st.cache
 def get_working_data(input_data):
     ALLOWED_COLUMNS = ['id', 'activeTime', 'monitorTime']
     working_data = pd.read_csv('dataset/WorkingDay.csv')
@@ -123,7 +117,6 @@ def get_working_data(input_data):
     data.fillna(0, inplace=True)          #Записываем 0 туда, где нет данных
     return data
 
-@st.cache
 def get_network_data(input_data):
     ALLOWED_COLUMNS = ['id', 'monitor_Time']
     network_data = pd.read_csv('dataset/TimenNetwork.csv')
@@ -134,7 +127,6 @@ def get_network_data(input_data):
     data.fillna(0, inplace=True)          #Записываем 0 туда, где нет данных
     return data
 
-@st.cache
 def get_calls_data(input_data):
     #Берём только эти столбцы из датасета
     ALLOWED_COLUMNS = ['id', 'NumberOfCalls', 'InOut', 'CallTime']
@@ -173,7 +165,7 @@ def get_dataframe(file):
 
 #Главная функция файла - извлекает и обрабатывает все данные для обучения и валидации
 @st.cache
-def get_train_dataset(train_data, tasks_encoder, scale_data=False, onehot_encode=False):
+def get_train_dataset(train_data, tasks_encoder, val_percentage, scale_data=False, onehot_encode=False):
     #train_data, tasks_encoder = get_dataframe(file)
     if 'Вид образования' in train_data.columns:
         train_data, education_encoder = process_education_info(train_data)
@@ -207,7 +199,9 @@ def get_train_dataset(train_data, tasks_encoder, scale_data=False, onehot_encode
 
     encoders = {'education_encoder':education_encoder, 'tasks_encoder':tasks_encoder}
 
-    x_train, x_val, y_train, y_val = train_test_split(x, y, train_size=train_size)
+    if val_percentage == 0:
+        return x, None, y, None, encoders, scaler
+    x_train, x_val, y_train, y_val = train_test_split(x, y, test_size=val_percentage)
     return x_train, x_val, y_train, y_val, encoders, scaler
 
 
