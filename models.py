@@ -32,7 +32,7 @@ class GradientBoostingAlgorithm:
         y_pred = self.model.predict(x_test)
         score = recall_score(y_test, y_pred, average='micro')
         print(f"Model recall score on test subset is {score}")
-        return score
+        return score, y_pred
 
     @classmethod
     def calculate_class_weights(cls, y):

@@ -1,5 +1,7 @@
 import streamlit as st
 import streamlit.components.v1 as components
+import pandas as pd
+
 from streamlit import session_state as sst
 from Data_Formation import get_train_dataset, get_test_dataset, get_dataframe
 from Optuna_Optimization import optuna_optimization
@@ -211,13 +213,19 @@ if __name__ == "__main__":
                                 on_click=test_buttons_callback)
 
         if test_button: #Когда нажимаем на тестовую кнопку:
-            x_test, y_test = get_test_dataset(  #Собираем тестовый датасет используя кодировщики из обучающей
+            x_test, y_test, data_indices = get_test_dataset(  #Собираем тестовый датасет используя кодировщики из обучающей
                 test_file, sst.dataset_columns, encoders, scaler, scale_data=scale_data, onehot_encode=onehot_encode
             )
 
-            test_score = sst.algorithm.test(x_test, y_test) #Тестируем
+            test_score, predictions = sst.algorithm.test(x_test, y_test) #Тестируем
             # Выводим точность на тестовой выборке в стримлит
             st.info(f"Точность модели на тестовой выборке: {round(100*test_score, 3)}%")
+
+            predictions = [label_to_classname[i] for i in predictions.flatten()]
+            predictions_dataframe = pd.DataFrame(data={'ID Сотрудника': data_indices, 'Предсказание': predictions})
+
+            st.write("Предсказания модели: ")
+            st.write(predictions_dataframe)
     st.caption("Автор: Никита Серов")
 
 

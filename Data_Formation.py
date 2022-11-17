@@ -208,6 +208,7 @@ def get_train_dataset(train_data, tasks_encoder, val_percentage, scale_data=Fals
 @st.cache
 def get_test_dataset(file, dataset_columns, encoders, scaler, scale_data=False, onehot_encode=False):
     test_data = pd.read_csv(file, index_col='id')
+    data_index = test_data.index.values
     test_data, _ = get_tasks_info(test_data, tasks_encoder=encoders['tasks_encoder'])
     test_data = get_skud_data(test_data)
     test_data = get_connection_data(test_data)
@@ -245,7 +246,7 @@ def get_test_dataset(file, dataset_columns, encoders, scaler, scale_data=False, 
     if onehot_encode:
         x_test = np.concatenate([x_test] + arrays_store, axis=1)
 
-    return x_test, y_test
+    return x_test, y_test, data_index
 
 
 #Код ниже используется для дебаггинга/проверки данных
