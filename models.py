@@ -22,10 +22,10 @@ class GradientBoostingAlgorithm:
     def train(self, x_train, y_train):
         self.model.fit(x_train, y_train.flatten())  # Обучаем алгоритм
 
-    def validate(self, x_val, y_val):
+    def validate(self, x_val, y_val, subset_type='validation'):
         y_pred = self.model.predict(x_val)                                     #Извлекаем предсказание
         score = recall_score(y_val, y_pred, average='micro')                   #Считаем метрику
-        print(f"Model recall score on validation subset is {score}")
+        print(f"Model recall score on {subset_type} subset is {score}")
         return score
 
     def test(self, x_test, y_test):
@@ -96,13 +96,13 @@ class NeuralNetwork:
         y_train = np.array(y_train, ndmin=2)
         self.model.fit(x_train, y_train, epochs=self.kwargs['num_epochs'], batch_size=self.kwargs['batch_size'], class_weight=class_weights)
 
-    def validate(self, x_val, y_val):
+    def validate(self, x_val, y_val, subset_type='validation'):
         x_val = np.array(x_val, ndmin=2)
         y_val = np.array(y_val, ndmin=2)
         y_pred = self.model.predict(x_val, batch_size=self.kwargs['batch_size'])
         y_pred = np.argmax(y_pred, axis=1)
         score = recall_score(y_val.flatten(), y_pred.flatten(), average='micro')
-        print(f"Model recall score on validation subset is {score}")
+        print(f"Model recall score on {subset_type} subset is {score}")
         return score
 
     def test(self, x_test, y_test):

@@ -1,0 +1,12 @@
+<style>
+    div.stButton > button:first-child {
+      background-color: rgb(120, 240, 120); /* Green */
+      border: 1px solid rgb(100, 200, 100);
+      color: black;
+      padding: 16px 42px;
+      text-align: center;
+      text-decoration: none;
+      display: inline-block;
+      font-size: 16px;
+    }
+</style>

@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components
 from streamlit import session_state as sst
 from Data_Formation import get_train_dataset, get_test_dataset, get_dataframe
 from Optuna_Optimization import optuna_optimization
@@ -12,6 +13,9 @@ np.random.seed(seed)   #Устанавливаем сид (sklearn исполь�
 tf.random.set_seed(seed) #Устанавливаем сид для нейросетей
 
 if __name__ == "__main__":
+    with open("style.css") as f: #Читаем style.css файл
+        st.markdown(f.read(), unsafe_allow_html=True) #Это предает стиль всему приложению
+
     st.title('Тестовое задание РАНХиГС')
     st.markdown(
         """
@@ -143,7 +147,8 @@ if __name__ == "__main__":
                        key='select_dataset_columns', options=possible_columns, default=possible_columns,
                        )
 
-        select_columns_button = st.sidebar.button("Выбрать указанные столбцы", key='select_columns_button')
+        select_columns_button = st.sidebar.button("Выбрать указанные столбцы", key='select_columns_button',
+                                                  help="Нажмите на кнопку чтобы выбрать указанные столбцы")
         st.sidebar.markdown('---')
         if select_columns_button:
             sst.dataset_columns = selected_columns + label_columns #Добавляем label_columns обратно в датасет
@@ -153,7 +158,10 @@ if __name__ == "__main__":
                                    min_value=0.0, max_value=0.9, value=0.2)
 
         #Кнопка для формирования и вывода матрицы корреляции
-        draw_heatmap = st.sidebar.button(label="Вывести матрицу корреляций", key='heatmap_button')
+        draw_heatmap = st.sidebar.button(label="Вывести матрицу корреляций", key='heatmap_button',
+                                         help="Нажмите на кнопку чтобы вывести матрицу корреляции всех выбранных столбцов")
+
+
         if draw_heatmap:
             create_heatmap_streamlit(train_dataframe[sst.dataset_columns]) #Функция для вывода матрицы корреляции
 
@@ -180,7 +188,7 @@ if __name__ == "__main__":
             sst.algorithm.train(x_train, y_train)  # Задаем параметры алгоритма
 
             # Валидируем на обучающей выборке
-            sst.train_score = sst.algorithm.validate(x_train, y_train)
+            sst.train_score = sst.algorithm.validate(x_train, y_train, subset_type='train')
             # Валидируем на валидационной выборке (только если у нас есть валидационная выборка)
             sst.val_score = sst.algorithm.validate(x_val, y_val) if val_percentage > 0 else None
 
@@ -199,7 +207,7 @@ if __name__ == "__main__":
 
         #Кнопка для теста
         test_button = st.button(label='Тестировать', key='test_button',
-                             disabled=True if not test_file else False,
+                                disabled=True if not test_file else False,
                                 on_click=test_buttons_callback)
 
         if test_button: #Когда нажимаем на тестовую кнопку:
