@@ -170,7 +170,10 @@ def get_dataframe(file):
 @st.cache
 def get_train_dataset(train_data, tasks_encoder, scale_data=False, onehot_encode=False):
     #train_data, tasks_encoder = get_dataframe(file)
-    train_data, education_encoder = process_education_info(train_data)
+    if 'Вид образования' in train_data.columns:
+        train_data, education_encoder = process_education_info(train_data)
+    else:
+        education_encoder = None
     #Масштабирование скалярных значений (преведенье столбцов в ст. распределение)
     scaler = StandardScaler()
     if scale_data:
@@ -214,7 +217,9 @@ def get_test_dataset(file, dataset_columns, encoders, scaler, scale_data=False, 
     test_data = get_calls_data(test_data)
     test_data = get_education_info(test_data)
 
-    test_data, _ = process_education_info(test_data, education_encoder=encoders['education_encoder'])
+
+    if 'Вид образования' in test_data.columns:
+        test_data, _ = process_education_info(test_data, education_encoder=encoders['education_encoder'])
 
     test_data = test_data[dataset_columns]
     if scale_data:

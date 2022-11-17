@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
+import streamlit as st
 import os
 
 from Data_Formation import *
@@ -62,6 +63,14 @@ def create_heatmap(dataset):
     sns.heatmap(correlation_matrix, annot=True)
     plt.title("Матрица корреляции")
     plt.show()
+
+@st.cache
+def create_heatmap_streamlit(dataset):
+    correlation_matrix = dataset.corr(method='spearman')
+    fig, ax = plt.subplots(figsize=(14, 8))
+    sns.heatmap(correlation_matrix, annot=True, ax=ax)
+    ax.set_title("Матрица корреляции")
+    st.sidebar.write(fig)
 
 
 if __name__ == "__main__":

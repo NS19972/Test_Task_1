@@ -1,10 +1,11 @@
 import streamlit as st
-
+from streamlit import session_state as sst
 from Data_Formation import get_train_dataset, get_test_dataset, get_dataframe
 from Optuna_Optimization import optuna_optimization
 from models import *
 from constants import kwargs
 from misc_functions import *
+from Data_Analysis import create_heatmap_streamlit
 from datetime import datetime
 
 np.random.seed(seed)   #Устанавливаем сид (sklearn использует сид от numpy)
@@ -28,12 +29,13 @@ if __name__ == "__main__":
              "выборку, и также загрузить аналогичный файл в качестве тестовой выборки. Затем, нужно нажать на кнопку "
              "'Обучить'.")
 
-    train_file = st.file_uploader("Загрузите обучающую выборку", key='upload_train_dataset', type=["csv"])
+    train_file = st.file_uploader("Загрузите обучающую выборку", key='upload_train_dataset', type=["csv"],
+                                  on_change=upload_train_dataset)
     st.markdown("---")
 
     possible_algorithms = ['XGBoost', 'Нейросеть', 'Гауссовский классификатор', 'SVM', 'Дерево Решений', 'Случайный Лес']
     selected_algorithm = st.selectbox(
-        "Выберите алгоритм для модели: ", possible_algorithms, key='selected_algorithm')
+        "Выберите алгоритм для модели: ", possible_algorithms, key='selected_algorithm', on_change=selected_algorithm)
 
     st.write("Настройте гиперпараметры для модели:")
     if selected_algorithm == possible_algorithms[0]:  #XGBoost
@@ -102,12 +104,16 @@ if __name__ == "__main__":
                 **ПРИМЕЧАНИЕ: Программе может потребоваться много времени для выполнения большого количества эпох.**
                 """)
 
-    if 'train_button_clicked' not in st.session_state: #Используем session_state чтобы запомнить нажатье кнопки
-        st.session_state.train_button_clicked = False  #Пока что на кнопку не нажали, по этому инициализируем False
-    if 'model_trained' not in st.session_state:
-        st.session_state.model_trained = False
-    if 'algorithm' not in st.session_state:
-        st.session_state.algorithm = None
+    if 'train_button_clicked' not in sst: #Используем session_state чтобы запомнить нажатье кнопки
+        sst.train_button_clicked = False  #Пока что на кнопку не нажали, по этому инициализируем False
+    if 'model_trained' not in sst:
+        sst.model_trained = False
+    if 'algorithm' not in sst:
+        sst.algorithm = None
+    if 'encode_train_data' not in sst:
+        sst.encode_train_data = True
+    if 'encode_test_data' not in sst:
+        sst.encode_test_data = True
 
     train_button = st.button(label='Обучить', key='train_button',
                              disabled=True if not train_file else False,
@@ -125,34 +131,41 @@ if __name__ == "__main__":
         train_dataframe, tasks_encoder = get_dataframe(train_file)
         possible_columns = [i for i in train_dataframe.columns.values if i not in label_columns]
         dataset_columns = st.sidebar.multiselect("Выберите столбцы для обучения нейросети",
-                       options=possible_columns, default=possible_columns
+                       key='select_dataset_columns', options=possible_columns, default=possible_columns,
+                                                 on_change=select_dataset_columns
                        )
-
         dataset_columns += label_columns
 
-    if st.session_state.train_button_clicked:
-        train_dataframe = train_dataframe[dataset_columns]
-        x_train, x_val, y_train, y_val, encoders, scaler = get_train_dataset(
-            train_dataframe, tasks_encoder, scale_data=scale_data, onehot_encode=onehot_encode  # Загружаем обработанный датасет
-        )
+        draw_heatmap = st.sidebar.button(label="Вывести матрицу корреляций", key='heatmap_button')
+        if draw_heatmap:
+            create_heatmap_streamlit(train_dataframe[dataset_columns])
+
+    if sst.train_button_clicked:
+        if sst.encode_train_data:
+            train_dataframe = train_dataframe[dataset_columns]
+            sst.x_train, sst.x_val, sst.y_train, sst.y_val, sst.encoders, sst.scaler = get_train_dataset(
+                train_dataframe, tasks_encoder, scale_data=scale_data, onehot_encode=onehot_encode  # Загружаем обработанный датасет
+            )
+            sst.encode_train_data = False
+            st.write(train_dataframe)
 
 
-        if not st.session_state.model_trained:
+        if not sst.model_trained:
             if use_optuna:
-                kwargs = optuna_optimization(x_train, y_train, x_val, y_val, selected_algorithm, optuna_epochs)
+                kwargs = optuna_optimization(sst.x_train, sst.y_train, sst.x_val, sst.y_val, selected_algorithm, optuna_epochs)
                 if selected_algorithm == 'SVM':
-                    kwargs['class_weight'] = calculate_class_weights(y_train) if kwargs['use_class_weights'] else None
+                    kwargs['class_weight'] = calculate_class_weights(sst.y_train) if kwargs['use_class_weights'] else None
                 elif selected_algorithm == 'Нейросеть':
                     kwargs['neural_network_hidden_neurons'] = [kwargs[f'layer_{i + 1}_size'] for i in
                                                                range(kwargs['hidden_layers'])]
-            st.session_state.algorithm = str_to_algorithm[selected_algorithm](**kwargs)
-            st.session_state.algorithm.train(x_train, y_train)  # Задаем параметры алгоритма
-            st.session_state.val_score = st.session_state.algorithm.validate(x_val, y_val)
-            st.session_state.model_trained = True
-        st.info(f"Точность модели на валидационной выборке: {round(100*st.session_state.val_score, 3)}%")
+            sst.algorithm = str_to_algorithm[selected_algorithm](**kwargs)
+            sst.algorithm.train(sst.x_train, sst.y_train)  # Задаем параметры алгоритма
+            sst.val_score = sst.algorithm.validate(sst.x_val, sst.y_val)
+            sst.model_trained = True
+        st.info(f"Точность модели на валидационной выборке: {round(100*sst.val_score, 3)}%")
 
         test_file = st.file_uploader("Загрузите тестовую выборку", key='upload_test_dataset', type=["csv"],
-                                     on_change=test_buttons_callback)
+                                     on_change=upload_test_dataset)
         st.markdown("---")
 
         test_button = st.button(label='Тестировать', key='test_button',
@@ -160,12 +173,14 @@ if __name__ == "__main__":
                                 on_click=test_buttons_callback)
 
         if test_button:
-            x_test, y_test = get_test_dataset(
-                test_file, dataset_columns, encoders, scaler, scale_data=scale_data, onehot_encode=onehot_encode
-            )
+            if sst.encode_test_data:
+                sst.x_test, sst.y_test = get_test_dataset(
+                    test_file, dataset_columns, sst.encoders, sst.scaler, scale_data=scale_data, onehot_encode=onehot_encode
+                )
 
-            test_score = st.session_state.algorithm.test(x_test, y_test)
+            test_score = sst.algorithm.test(sst.x_test, sst.y_test)
             st.info(f"Точность модели на тестовой выборке: {round(100*test_score, 3)}%")
+            sst.encode_test_data = False
     st.caption("Автор: Никита Серов")
 
 

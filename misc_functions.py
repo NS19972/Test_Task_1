@@ -1,6 +1,7 @@
 import numpy as np
 from Data_Formation import get_dataframe
 import streamlit as st
+from streamlit import session_state as sst
 
 
 def calculate_class_weights(y):
@@ -18,8 +19,29 @@ def select_columns(file):
     return file, dataset_columns
 
 def train_buttons_callback():
-    st.session_state.train_button_clicked = True
-    st.session_state.model_trained = False
+    sst.train_button_clicked = True
+    sst.model_trained = False
 
 def test_buttons_callback():
-    st.session_state.train_button_clicked = True
+    sst.train_button_clicked = True
+
+def upload_test_dataset():
+    sst.encode_test_data = True
+    sst.train_button_clicked = True
+
+def upload_train_dataset():
+    sst.encode_train_data = True
+
+def selected_algorithm():
+    sst.encode_train_data = True
+    sst.encode_test_data = True
+    sst.model_trained = False
+
+def selected_algorithm():
+    sst.encode_train_data = True
+    sst.encode_test_data = True
+    sst.model_trained = False
+
+def select_dataset_columns():
+    sst.encode_train_data = True
+    sst.encode_test_data = True
