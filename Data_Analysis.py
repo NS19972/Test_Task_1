@@ -6,7 +6,6 @@ import os
 
 from Data_Formation import *
 
-@st.cache
 def analyze_class_frequency(dataset):
     def func(pct):
         return "{:1.1f}%".format(pct)
@@ -19,6 +18,17 @@ def analyze_class_frequency(dataset):
     plt.title("Относительное количество каждого класса в выборке")
     plt.show()
 
+def analyze_class_frequency_streamlit(dataset):
+    def func(pct):
+        return "{:1.1f}%".format(pct)
+
+    classes = dataset['type']
+    unique_categories, counts = np.unique(classes.values, return_counts=True)  # Считаем как часто каждая категория встречается
+
+    fig, ax = plt.subplots(figsize=(14, 8))
+    ax.pie(counts, labels = [f"Class {i}" for i in range(len(counts))], autopct=lambda pct: func(pct))
+    ax.set_title("Относительное количество каждого класса в выборке")
+    st.sidebar.write(fig)
 
 #Данная функция выводит КУМУЛЯТИВНЫЕ гистограммы
 #Именно кумулятивные гистограммы нам показывают, что почти все данные для всех столбцов находяться около нуля

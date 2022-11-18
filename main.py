@@ -7,7 +7,7 @@ from Optuna_Optimization import optuna_optimization
 from models import *
 from constants import kwargs
 from misc_functions import *
-from Data_Analysis import create_heatmap_streamlit
+from Data_Analysis import *
 from datetime import datetime
 
 np.random.seed(seed)   #Устанавливаем сид (sklearn использует сид от numpy)
@@ -155,13 +155,24 @@ if __name__ == "__main__":
         val_percentage = st.sidebar.slider("Доля валидационной выборки от общего датасета",
                                    min_value=0.0, max_value=0.9, value=0.2)
 
-        #Кнопка для формирования и вывода матрицы корреляции
-        draw_heatmap = st.sidebar.button(label="Вывести матрицу корреляций", key='heatmap_button',
-                                         help="Нажмите на кнопку чтобы вывести матрицу корреляции всех выбранных столбцов")
+        left, right = st.sidebar.beta_columns(2) #Метод для отрисовки двух кнопок рядом с друг-другом
+        with left:
+            #Кнопка для формирования и вывода матрицы корреляции
+            draw_heatmap = st.button(label="Вывести матрицу корреляций", key='heatmap_button',
+                                     help="Нажмите на кнопку чтобы вывести матрицу корреляции всех выбранных столбцов")
+        with right:
+            #Кнопка для формирования и вывода криговой гиаграммы частотности разных классов
+            draw_class_histogram = st.button(
+                label="Вывести круговую диаграмму частотности классов",
+                key='histogram_button',
+                help="Нажмите на кнопку чтобы посмотреть гистограмму классов с столбца 'type'"
+            )
 
 
         if draw_heatmap:
             create_heatmap_streamlit(train_dataframe[sst.dataset_columns]) #Функция для вывода матрицы корреляции
+        elif draw_class_histogram:
+            analyze_class_frequency_streamlit(train_dataframe)
 
     #При нажатии на кпонку "Обучение"
     if sst.train_button_clicked:

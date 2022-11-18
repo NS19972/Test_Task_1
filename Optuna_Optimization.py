@@ -9,19 +9,21 @@ def optuna_optimization(x_train, y_train, x_val, y_val, selected_algorithm, opti
 
     def objective_function(trial):
         kwargs = {}
-        if isinstance(selected_algorithm, NeuralNetwork):
-            kwargs['hidden_layers'] = trial.suggest_int("hidden_layers", 0, 4)
-            layer_1_size = trial.suggest_int("layer_1_size", 16, 64, log=True) if kwargs['hidden_layers'] >= 1 else 0
-            layer_2_size = trial.suggest_int("layer_2_size", 16, 64, log=True) if kwargs['hidden_layers'] >= 2 else 0
-            layer_3_size = trial.suggest_int("layer_3_size", 16, 64, log=True) if kwargs['hidden_layers'] >= 3 else 0
-            layer_4_size = trial.suggest_int("layer_4_size", 16, 64, log=True) if kwargs['hidden_layers'] >= 4 else 0
+        if isinstance(selected_algorithm, NeuralNetwork): #Подбор гиперпараметров для нейросети
+            kwargs['hidden_layers'] = trial.suggest_int("hidden_layers", 0, 4) #Задаем количество скрытых слоев
+            #Задаем количество нейронов в слоях
+            layer_1_size = trial.suggest_int("layer_1_size", 4, 64, log=True) if kwargs['hidden_layers'] >= 1 else 0
+            layer_2_size = trial.suggest_int("layer_2_size", 4, 64, log=True) if kwargs['hidden_layers'] >= 2 else 0
+            layer_3_size = trial.suggest_int("layer_3_size", 4, 64, log=True) if kwargs['hidden_layers'] >= 3 else 0
+            layer_4_size = trial.suggest_int("layer_4_size", 4, 64, log=True) if kwargs['hidden_layers'] >= 4 else 0
+            # Складываем все слои в один список
             kwargs['neural_network_hidden_neurons'] = [layer_1_size, layer_2_size, layer_3_size, layer_4_size]
-            kwargs['num_epochs'] = trial.suggest_int('num_epochs', 1, 10)
-            kwargs['NN_learning_rate'] = trial.suggest_float('NN_learning_rate', 1e-5, 1e-2, log=True)
-            kwargs['batch_size'] = trial.suggest_int('batch_size', 16, 256)
-            kwargs['use_class_weights'] = trial.suggest_categorical('use_class_weights', [True, False])
+            kwargs['num_epochs'] = trial.suggest_int('num_epochs', 1, 10) #Количество эпох обучения
+            kwargs['NN_learning_rate'] = trial.suggest_float('NN_learning_rate', 1e-5, 1e-2, log=True) #Скорость обучения
+            kwargs['batch_size'] = trial.suggest_int('batch_size', 16, 256) #Размер батча
+            kwargs['use_class_weights'] = trial.suggest_categorical('use_class_weights', [True, False]) #Использовать взвешанные классы?
 
-            algorithm = NeuralNetwork(**kwargs)
+            algorithm = NeuralNetwork(**kwargs) #Создаем новый объект нейронной сети
 
         elif isinstance(selected_algorithm, GradientBoostingAlgorithm):
             kwargs['GB_learning_rate'] = trial.suggest_float('GB_learning_rate', 1e-2, 5e-1, log=True)
