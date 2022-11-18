@@ -1,5 +1,4 @@
 import streamlit as st
-import streamlit.components.v1 as components
 import pandas as pd
 
 from streamlit import session_state as sst
@@ -132,9 +131,6 @@ if __name__ == "__main__":
                         'Дерево Решений': DecisionTreeAlgorithm, 'Случайный Лес': RandomForestAlgorithm,
                         'Гауссовский классификатор': GaussianAlgorithm}
 
-    scale_data = True if selected_algorithm == 'Нейросеть' else False #Скалирование данных нужно только для нейросети
-    onehot_encode = True if selected_algorithm in ['Нейросеть', 'SVM'] else False #OHE нужно только для нейросети и SVC
-
     #Окно с возможностью выбора столбцов вылезает при загрузки обучающей выборки
     if train_file is not None:
         label_columns = ['type'] #Список всех столбцов, которые подаются в y_train/y_test (всего один такой столбец)
@@ -149,7 +145,7 @@ if __name__ == "__main__":
                        key='select_dataset_columns', options=possible_columns, default=possible_columns,
                        )
 
-        select_columns_button = st.sidebar.button("Выбрать указанные столбцы", key='select_columns_button',
+        select_columns_button = st.sidebar.button("Подтвердить выбор столбцов", key='select_columns_button',
                                                   help="Нажмите на кнопку чтобы выбрать указанные столбцы")
         st.sidebar.markdown('---')
         if select_columns_button:
@@ -169,24 +165,25 @@ if __name__ == "__main__":
 
     #При нажатии на кпонку "Обучение"
     if sst.train_button_clicked:
+        if not sst.model_trained:
+            sst.algorithm = str_to_algorithm[selected_algorithm](**kwargs)
         train_dataframe = train_dataframe[sst.dataset_columns] #Обрабатываем датасет и формируем x, y для val и train
         x_train, x_val, y_train, y_val, encoders, scaler = get_train_dataset(
             train_dataframe, tasks_encoder, val_percentage=val_percentage,  # Загружаем обработанный датасет
-            scale_data=scale_data, onehot_encode=onehot_encode
+            scale_data=sst.algorithm.requires_normalization, onehot_encode=sst.algorithm.requires_OHE
         )
 
         #Если модель ранее не была обучена:
         # (условие нужно, чтобы модель не обучалась заново при нажатии нерелевантных кнопок)
         if not sst.model_trained:
             if use_optuna:  #Оптимизация кода оптуной
-                kwargs = optuna_optimization(x_train, y_train, x_val, y_val, selected_algorithm, optuna_epochs)
+                kwargs = optuna_optimization(x_train, y_train, x_val, y_val, sst.algorithm, optuna_epochs)
                 #Блок кода, который обнавляет значения в kwargs в зависимости от полученного результата из Оптуны
-                if selected_algorithm == 'SVM':
+                if isinstance(sst.algorithm, SVMAlgorithm):
                     kwargs['class_weight'] = calculate_class_weights(y_train) if kwargs['use_class_weights'] else None
-                elif selected_algorithm == 'Нейросеть':
+                elif isinstance(sst.algorithm, NeuralNetwork):
                     kwargs['neural_network_hidden_neurons'] = [kwargs[f'layer_{i + 1}_size'] for i in
                                                                range(kwargs['hidden_layers'])]
-            sst.algorithm = str_to_algorithm[selected_algorithm](**kwargs)
             sst.algorithm.train(x_train, y_train)  # Задаем параметры алгоритма
 
             # Валидируем на обучающей выборке
@@ -214,7 +211,8 @@ if __name__ == "__main__":
 
         if test_button: #Когда нажимаем на тестовую кнопку:
             x_test, y_test, data_indices = get_test_dataset(  #Собираем тестовый датасет используя кодировщики из обучающей
-                test_file, sst.dataset_columns, encoders, scaler, scale_data=scale_data, onehot_encode=onehot_encode
+                test_file, sst.dataset_columns, encoders, scaler,
+                scale_data=sst.algorithm.requires_normalization, onehot_encode=sst.algorithm.requires_OHE
             )
 
             test_score, predictions = sst.algorithm.test(x_test, y_test) #Тестируем

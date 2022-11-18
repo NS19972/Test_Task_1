@@ -9,7 +9,7 @@ def optuna_optimization(x_train, y_train, x_val, y_val, selected_algorithm, opti
 
     def objective_function(trial):
         kwargs = {}
-        if selected_algorithm.lower() == 'нейросеть':
+        if isinstance(selected_algorithm, NeuralNetwork):
             kwargs['hidden_layers'] = trial.suggest_int("hidden_layers", 0, 4)
             layer_1_size = trial.suggest_int("layer_1_size", 16, 64, log=True) if kwargs['hidden_layers'] >= 1 else 0
             layer_2_size = trial.suggest_int("layer_2_size", 16, 64, log=True) if kwargs['hidden_layers'] >= 2 else 0
@@ -23,7 +23,7 @@ def optuna_optimization(x_train, y_train, x_val, y_val, selected_algorithm, opti
 
             algorithm = NeuralNetwork(**kwargs)
 
-        elif selected_algorithm.lower() == 'xgboost':
+        elif isinstance(selected_algorithm, GradientBoostingAlgorithm):
             kwargs['GB_learning_rate'] = trial.suggest_float('GB_learning_rate', 1e-2, 5e-1, log=True)
             kwargs['n_estimators'] = trial.suggest_int('n_estimators', 10, 500, log=True)
             kwargs['GB_max_depth'] = trial.suggest_int('GB_max_depth', 1, 5)
@@ -31,7 +31,7 @@ def optuna_optimization(x_train, y_train, x_val, y_val, selected_algorithm, opti
 
             algorithm = GradientBoostingAlgorithm(**kwargs)
 
-        elif selected_algorithm.lower() == 'случайный лес':
+        elif isinstance(selected_algorithm, RandomForestAlgorithm):
             kwargs['n_estimators'] = trial.suggest_int('n_estimators', 10, 500, log=True)
             use_max_depth = trial.suggest_categorical('use_max_depth', [True, False])
             kwargs['Tree_max_depth'] = trial.suggest_int('Tree_max_depth', 1, 5) if use_max_depth else None
@@ -39,7 +39,7 @@ def optuna_optimization(x_train, y_train, x_val, y_val, selected_algorithm, opti
 
             algorithm = RandomForestAlgorithm(**kwargs)
 
-        elif selected_algorithm.lower() == 'дерево решений':
+        elif isinstance(selected_algorithm, DecisionTreeAlgorithm):
             use_max_depth = trial.suggest_categorical('use_max_depth', [True, False])
             kwargs['Tree_max_depth'] = trial.suggest_int('Tree_max_depth', 1, 5) if use_max_depth else None
             kwargs['criterion'] = trial.suggest_categorical('criterion', ['gini', 'entropy', 'log_loss'])
@@ -47,7 +47,7 @@ def optuna_optimization(x_train, y_train, x_val, y_val, selected_algorithm, opti
 
             algorithm = DecisionTreeAlgorithm(**kwargs)
 
-        elif selected_algorithm.lower() == 'svm':
+        elif isinstance(selected_algorithm, SVMAlgorithm):
             kwargs['C'] = trial.suggest_float('C', 0.5, 2)
             kwargs['use_class_weights'] = trial.suggest_categorical('use_class_weights', [True, False])
             kwargs['class_weight'] = calculate_class_weights(y_train) if kwargs['use_class_weights'] else None
@@ -55,7 +55,7 @@ def optuna_optimization(x_train, y_train, x_val, y_val, selected_algorithm, opti
 
             algorithm = SVMAlgorithm(**kwargs)
 
-        elif selected_algorithm.lower() == 'гауссовский классификатор':
+        elif isinstance(selected_algorithm, GaussianAlgorithm):
             kwargs['max_iter_predict'] = trial.suggest_int('max_iter_predict', 10, 500, log=True)
             kwargs['warm_start'] = trial.suggest_categorical('warm_start', [True, False])
 

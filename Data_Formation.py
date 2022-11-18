@@ -187,8 +187,9 @@ def get_train_dataset(train_data, tasks_encoder, val_percentage, scale_data=Fals
         categorical_columns = ['Вид образования'] #Список всех столбцов которые подлежат onehot кодированию
         arrays_store = []
         for column in categorical_columns:
-            onehot_data = OneHotEncoder(sparse=False).fit_transform(train_data[column].values.reshape(-1, 1))
-            arrays_store.append(onehot_data)
+            if column in train_data.columns:
+                onehot_data = OneHotEncoder(sparse=False).fit_transform(train_data[column].values.reshape(-1, 1))
+                arrays_store.append(onehot_data)
         train_data.drop(categorical_columns, axis=1, inplace=True)
 
     x, y = train_data.loc[:, train_data.columns != 'type'].values, \
@@ -236,8 +237,9 @@ def get_test_dataset(file, dataset_columns, encoders, scaler, scale_data=False, 
         categorical_columns = ['Вид образования']  # Список всех столбцов которые подлежат onehot кодированию
         arrays_store = []
         for column in categorical_columns:
-            onehot_data = OneHotEncoder(sparse=False).fit_transform(test_data[column].values.reshape(-1, 1))
-            arrays_store.append(onehot_data)
+            if column in test_data.columns:
+                onehot_data = OneHotEncoder(sparse=False).fit_transform(test_data[column].values.reshape(-1, 1))
+                arrays_store.append(onehot_data)
         test_data.drop(categorical_columns, axis=1, inplace=True)
 
     x_test, y_test = test_data.loc[:, test_data.columns != 'type'].values, \
