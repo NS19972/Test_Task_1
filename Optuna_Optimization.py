@@ -68,17 +68,21 @@ def optuna_optimization(x_train, y_train, x_val, y_val, selected_algorithm, opti
             raise KeyError
 
         algorithm.train(x_train, y_train)  # Задаем параметры алгоритма
-        val_score = algorithm.validate(x_val, y_val) # Оптимизируем патамерты только на валидационной выборке
+        val_score = algorithm.validate(x_val, y_val)  # Оптимизируем параметры только на валидационной выборке
         return val_score
 
-    my_bar = st.progress(0)
-    percent_progress = 0.0
+    percent_progress = 0.0  # Значение прогресс-бара инициализируется как 0
+    my_bar = st.progress(percent_progress)  # Создаем прогресс-бар
 
+    # Функция, которая выводит прогресс-бар
     def optuna_progress_bar(study, frozen_trial):
+        # Объявляем переменные как нелокальные, по сколько мы не можем их применять на вход в функцию
         nonlocal my_bar, percent_progress
-        percent_progress += 1/optimization_epochs
+        # Обновляем значение прогресс-бара (min нужен для избежания дурацких ошибок на последней эпохе)
+        percent_progress = min(percent_progress + 1/optimization_epochs, 1.0)
         my_bar.progress(percent_progress)
 
+    # Создаем объект исследования, с которым будем оптимизировать функцию
     study = optuna.create_study(direction="maximize", storage=optuna.storages.RDBStorage(
         url=f'sqlite:///optimization.db', engine_kwargs={"connect_args": {"timeout": 100}}))
 
