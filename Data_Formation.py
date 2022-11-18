@@ -22,7 +22,7 @@ def get_education_info(input_data):
     education_data.set_index('id', inplace=True)          #Устанавливаем столбец 'id' как индексовый
 
     data = input_data.join(education_data, how='left')    #Делаем left join чтобы добавить данные только по тем соотрудникам, которые есть в train/test
-    data.fillna("Нет данных", inplace=True)
+    data['Вид образования'].fillna("Нет данных", inplace=True)
     return data #Возвращаем данные и кодировщик
 
 def process_education_info(data, education_encoder=None):
@@ -71,7 +71,7 @@ def get_tasks_info(input_data, tasks_encoder=None):
     tasks_data = tasks_data.groupby('id').sum()
 
     data = input_data.join(tasks_data, how='left') #Стоит отметить - из-за join появляются NaN-ы по сколько не для всех работников есть данные
-    data.fillna(0, inplace=True)   #Везде где у нас нет данных на количество задач - записываем 0
+    data[tasks_data.columns.values] = data[tasks_data.columns.values].fillna(0)   #Везде где у нас нет данных на количество задач - записываем 0
 
     return data, tasks_encoder #Возвращаем данные и кодировщик
 
@@ -90,7 +90,7 @@ def get_skud_data(input_data):
 
     skud_data = skud_data.groupby('id').sum()     #Группируем данные и суммируем чтобы получить общее количество часов для каждого соотрудника
     data = input_data.join(skud_data, how='left') #Делаем join чтобы добавить данные только для соотрудников из обучающей выборки
-    data.fillna(0, inplace=True)          #Записываем 0 туда, где нет данных
+    data[skud_data.columns.values] = data[skud_data.columns.values].fillna(0) #Записываем 0 туда, где нет данных
     return data
 
 def get_connection_data(input_data):
@@ -103,7 +103,7 @@ def get_connection_data(input_data):
 
     connection_data = connection_data.groupby('id').sum()
     data = input_data.join(connection_data, how='left')
-    data.fillna(0, inplace=True)          #Записываем 0 туда, где нет данных
+    data[connection_data.columns.values] = data[connection_data.columns.values].fillna(0) #Записываем 0 туда, где нет данных
     return data
 
 def get_working_data(input_data):
@@ -114,7 +114,7 @@ def get_working_data(input_data):
     working_data.rename({'monitorTime': 'monitorTimeWorking'}, axis=1, inplace=True)
     working_data = working_data.groupby('id').sum()
     data = input_data.join(working_data, how='left')
-    data.fillna(0, inplace=True)          #Записываем 0 туда, где нет данных
+    data[working_data.columns.values] = data[working_data.columns.values].fillna(0) #Записываем 0 туда, где нет данных
     return data
 
 def get_network_data(input_data):
@@ -124,7 +124,7 @@ def get_network_data(input_data):
     network_data.rename({'monitor_Time': 'monitorTimeNetwork'}, axis=1, inplace=True)
     network_data = network_data.groupby('id').sum()
     data = input_data.join(network_data, how='left')
-    data.fillna(0, inplace=True)          #Записываем 0 туда, где нет данных
+    data[network_data.columns.values] = data[network_data.columns.values].fillna(0) #Записываем 0 туда, где нет данных
     return data
 
 def get_calls_data(input_data):
@@ -148,7 +148,8 @@ def get_calls_data(input_data):
 
     data = input_data.join(in_calls, how='left')
     data = data.join(out_calls, how='left')
-    data.fillna(0, inplace=True)          #Записываем 0 туда, где нет данных
+    columns_to_fill = in_calls.columns.values.tolist() + out_calls.columns.values.tolist()
+    data[columns_to_fill] = data[columns_to_fill].fillna(0)          #Записываем 0 туда, где нет данных
     return data
 
 @st.cache

@@ -6,6 +6,7 @@ import os
 
 from Data_Formation import *
 
+
 def analyze_class_frequency(dataset):
     def func(pct):
         return "{:1.1f}%".format(pct)
@@ -18,6 +19,7 @@ def analyze_class_frequency(dataset):
     plt.title("Относительное количество каждого класса в выборке")
     plt.show()
 
+
 def analyze_class_frequency_streamlit(dataset):
     def func(pct):
         return "{:1.1f}%".format(pct)
@@ -29,6 +31,7 @@ def analyze_class_frequency_streamlit(dataset):
     ax.pie(counts, labels = [f"Class {i}" for i in range(len(counts))], autopct=lambda pct: func(pct))
     ax.set_title("Относительное количество каждого класса в выборке")
     st.sidebar.write(fig)
+
 
 #Данная функция выводит КУМУЛЯТИВНЫЕ гистограммы
 #Именно кумулятивные гистограммы нам показывают, что почти все данные для всех столбцов находяться около нуля
@@ -50,6 +53,7 @@ def analyze_calls_data(dataset):
     plt.tight_layout()
     plt.show()
 
+
 @st.cache
 def analyze_monitor_data(dataset):
     dataset = dataset[['activeTime', 'monitorTimeWorking', 'monitorTimeNetwork']]
@@ -67,12 +71,14 @@ def analyze_monitor_data(dataset):
     plt.tight_layout()
     plt.show()
 
+
 def create_heatmap(dataset):
     correlation_matrix = dataset.corr(method='spearman')
     plt.figure(figsize=(14, 8))
     sns.heatmap(correlation_matrix, annot=True)
     plt.title("Матрица корреляции")
     plt.show()
+
 
 def create_heatmap_streamlit(dataset):
     correlation_matrix = dataset.corr(method='spearman')

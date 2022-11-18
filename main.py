@@ -66,7 +66,7 @@ if __name__ == "__main__":
 
     elif selected_algorithm == possible_algorithms[2]:  #Гауссовский классификатор
         kwargs['max_iter_predict'] = st.slider("Максимальное число итераций", min_value=10, max_value=500, value=100)
-        kwargs['warm_start'] = st.checkbox("Использовать 'тёплое' начало (игнорируйте если не знаете что это такое")
+        kwargs['warm_start'] = st.checkbox("Использовать 'тёплое' начало (игнорируйте если не знаете что это такое)")
 
     elif selected_algorithm == possible_algorithms[3]:  #SVM
         kwargs['C'] = st.slider("Регуляризация", min_value=0.1, max_value=5.0, value=1.0)
@@ -155,24 +155,23 @@ if __name__ == "__main__":
         val_percentage = st.sidebar.slider("Доля валидационной выборки от общего датасета",
                                    min_value=0.0, max_value=0.9, value=0.2)
 
-        left, right = st.sidebar.beta_columns(2) #Метод для отрисовки двух кнопок рядом с друг-другом
+        left, right = st.sidebar.columns(2) #Метод для отрисовки двух кнопок рядом с друг-другом
         with left:
             #Кнопка для формирования и вывода матрицы корреляции
             draw_heatmap = st.button(label="Вывести матрицу корреляций", key='heatmap_button',
                                      help="Нажмите на кнопку чтобы вывести матрицу корреляции всех выбранных столбцов")
         with right:
-            #Кнопка для формирования и вывода криговой гиаграммы частотности разных классов
+            #Кнопка для формирования и вывода круговой гиаграммы частотности разных классов
             draw_class_histogram = st.button(
                 label="Вывести круговую диаграмму частотности классов",
                 key='histogram_button',
                 help="Нажмите на кнопку чтобы посмотреть гистограмму классов с столбца 'type'"
             )
 
-
         if draw_heatmap:
             create_heatmap_streamlit(train_dataframe[sst.dataset_columns]) #Функция для вывода матрицы корреляции
         elif draw_class_histogram:
-            analyze_class_frequency_streamlit(train_dataframe)
+            analyze_class_frequency_streamlit(train_dataframe) #Функция для вывода круговой диаграммы классов
 
     #При нажатии на кпонку "Обучение"
     if sst.train_button_clicked:
@@ -195,7 +194,7 @@ if __name__ == "__main__":
                 elif isinstance(sst.algorithm, NeuralNetwork):
                     kwargs['neural_network_hidden_neurons'] = [kwargs[f'layer_{i + 1}_size'] for i in
                                                                range(kwargs['hidden_layers'])]
-            sst.algorithm.train(x_train, y_train)  # Задаем параметры алгоритма
+            sst.algorithm.train(x_train, y_train)  # Обучаем алгоритм
 
             # Валидируем на обучающей выборке
             sst.train_score = sst.algorithm.validate(x_train, y_train, subset_type='train')
@@ -230,9 +229,11 @@ if __name__ == "__main__":
             # Выводим точность на тестовой выборке в стримлит
             st.info(f"Точность модели на тестовой выборке: {round(100*test_score, 3)}%")
 
-            predictions = [label_to_classname[i] for i in predictions.flatten()]
+            predictions = [label_to_classname[i] for i in predictions.flatten()] #Переводим лейблы в названия классов
+            #Создаем датафрейм с ID сотрудников и предсказаниям нейросети
             predictions_dataframe = pd.DataFrame(data={'ID Сотрудника': data_indices, 'Предсказание': predictions})
 
+            #Выводим то, что предсказала модель
             st.write("Предсказания модели: ")
             st.write(predictions_dataframe)
     st.caption("Автор: Никита Серов")
