@@ -86,5 +86,6 @@ def optuna_optimization(x_train, y_train, x_val, y_val, selected_algorithm, opti
     study = optuna.create_study(direction="maximize", storage=optuna.storages.RDBStorage(
         url=f'sqlite:///optimization.db', engine_kwargs={"connect_args": {"timeout": 100}}))
 
+    # Оптимизируем гиперпараметры алгоритма используя оптуну
     study.optimize(objective_function, n_trials=optimization_epochs, callbacks=[optuna_progress_bar])
     return study.best_params
