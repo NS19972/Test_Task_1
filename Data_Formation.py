@@ -1,7 +1,6 @@
 import pandas as pd
 import numpy as np
 import streamlit as st
-
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder, StandardScaler, OneHotEncoder
 
@@ -13,7 +12,7 @@ np.random.seed(seed)   #Устанавливаем сид (sklearn исполь�
 #Функция которая извлекает и обрабатывает данные из файла Education.csv
 #Данные парсяться чтобы получить категорию образования соотрудника, которая отображается в виде числа
 def get_education_info(input_data):
-    ALLOWED_COLUMNS = ['id', 'Вид образования']   #Исключаем данные о специальности, т.к. там слишком много категорий
+    ALLOWED_COLUMNS = ['id', 'Вид образования', 'Специальность'] #Исключаем данные о специальности, т.к. там слишком много категорий
 
     education_data = pd.read_csv('dataset/Education.csv') #Читаем файл
     education_data = education_data[ALLOWED_COLUMNS]      #Оставляем только выбранные столбцы
@@ -22,27 +21,32 @@ def get_education_info(input_data):
     education_data.set_index('id', inplace=True)          #Устанавливаем столбец 'id' как индексовый
 
     data = input_data.join(education_data, how='left')    #Делаем left join чтобы добавить данные только по тем соотрудникам, которые есть в train/test
-    data['Вид образования'].fillna("Нет данных", inplace=True)
+    #Записываем 'Нет Данных' туда, где есть NaN
+    data[education_data.columns.values] = data[education_data.columns.values].fillna("Нет данных")
     return data #Возвращаем данные и кодировщик
 
-def process_education_info(data, education_encoder=None):
+def process_education_info(data, encoders=None):
     #ПРИМЕЧАНИЕ: некоторые категории очень редко встречаются в датасете - по этому мы их просто пометим как Other (другое)
-    unique_categories, counts = np.unique(data['Вид образования'].astype(str).values, return_counts=True)  #Считаем как часто каждая категория встречается
+    encoders_to_return = {}
+    for column in ['Вид образования', 'Специальность']:
+        if column not in data.columns.values:
+            continue
 
-    frequency_dict = dict(zip(unique_categories, counts))                                    #Создаем словарь из полученных категорий и сколько раз они встречаются
+        if encoders is None:
+            column_encoder = LabelEncoder()            #Создаем энкодер для строковых данных
+            column_encoder.fit(data[column])
+            encoders_to_return[column] = column_encoder
+            #Переводим все строки в числа с помощью кодировщика
+            data[column] = column_encoder.transform(data[column])
+        else:
+            column_encoder = encoders[column]
+            data_to_transform = data[column]
+            data_to_transform = data_to_transform.map(lambda s: '<unknown>' if s not in column_encoder.classes_ else s)
+            column_encoder.classes_ = np.append(column_encoder.classes_, '<unknown>')
+            #Переводим все строки в числа с помощью кодировщика
+            data[column] = column_encoder.transform(data_to_transform)
 
-    #Переводим все редкие категории, а также категорию nan в Other
-    infrequent_categories = [k for k, v in frequency_dict.items() if v < 10 or k == 'nan']
-    for category in infrequent_categories:
-        data.loc[data['Вид образования'] == category, 'Вид образования'] = 'Other'
-
-    if education_encoder is None:
-        education_encoder = LabelEncoder()            #Создаем энкодер для строковых данных
-        education_encoder.fit(data['Вид образования'])
-
-    #Переводим все строки в числа с помощью кодировщика
-    data['Вид образования'] = education_encoder.transform(data['Вид образования'])
-    return data, education_encoder
+    return data, encoders_to_return
 
 #Функция которая извлекает и обрабатывает данные из файла Tasks.csv
 #Данные парсяться чтобы получить количество просроченных и не-просроченных задач каждого соотрудника
@@ -59,8 +63,10 @@ def get_tasks_info(input_data, tasks_encoder=None):
         tasks_encoder = LabelEncoder()
         tasks_encoder.fit(tasks_data['Статус по просрочке'].values) #Кодируем строки в числа (0 или 1 по сколько у нас две категории)
 
-    lates_column = tasks_encoder.transform(tasks_data['Статус по просрочке'].values)  # Кодируем строки в числа (0 или 1 по сколько у нас две категории)
-    lates_column_categorical = OneHotEncoder(sparse=False).fit_transform(lates_column.reshape(-1, 1))  #Переводим числа в onehot вектор
+    lates_column = tasks_encoder.transform(tasks_data['Статус по просрочке'].values).flatten()  # Кодируем строки в числа (0 или 1 по сколько у нас две категории)
+
+    n_values = 2 #Указываем, что у нас всегда 2 категории
+    lates_column_categorical = np.eye(n_values)[lates_column]  #Переводим числа в onehot вектор
     tasks_data['Not Lates'] = lates_column_categorical[:, 0] #Записываем все не просроченные задачи в один столбец (0 или 1)
     tasks_data['Lates'] = lates_column_categorical[:, 1]     #Записываем все просроченные задачи в другой столбец (0 или 1)
 
@@ -165,13 +171,9 @@ def get_dataframe(file):
     return data, tasks_encoder
 
 #Главная функция файла - извлекает и обрабатывает все данные для обучения и валидации
-@st.cache
+@st.cache(allow_output_mutation=True)
 def get_train_dataset(train_data, tasks_encoder, val_percentage, scale_data=False, onehot_encode=False):
-    #train_data, tasks_encoder = get_dataframe(file)
-    if 'Вид образования' in train_data.columns:
-        train_data, education_encoder = process_education_info(train_data)
-    else:
-        education_encoder = None
+    train_data, education_encoders = process_education_info(train_data)
     #Масштабирование скалярных значений (преведенье столбцов в ст. распределение)
     scaler = StandardScaler()
     if scale_data:
@@ -184,14 +186,19 @@ def get_train_dataset(train_data, tasks_encoder, val_percentage, scale_data=Fals
 
         train_data[common_columns] = scaler.fit_transform(train_data[common_columns]) #Скалируем выше-указанные столбцы
 
+    Onehot_Encoders = {}
     if onehot_encode:
-        categorical_columns = ['Вид образования'] #Список всех столбцов которые подлежат onehot кодированию
+        categorical_columns = ['Вид образования', 'Специальность'] #Список всех столбцов которые подлежат onehot кодированию
+        columns_in_dataset = [i for i in categorical_columns if i in train_data.columns]
         arrays_store = []
-        for column in categorical_columns:
+        for column in columns_in_dataset:
             if column in train_data.columns:
-                onehot_data = OneHotEncoder(sparse=False).fit_transform(train_data[column].values.reshape(-1, 1))
+                OHE_encoder = OneHotEncoder(sparse=False, min_frequency=10, handle_unknown='infrequent_if_exist')
+                onehot_data = OHE_encoder.fit_transform(train_data[column].values.reshape(-1, 1))
+                Onehot_Encoders[column] = OHE_encoder
                 arrays_store.append(onehot_data)
-        train_data.drop(categorical_columns, axis=1, inplace=True)
+
+        train_data.drop(columns_in_dataset, axis=1, inplace=True)
 
     x, y = train_data.loc[:, train_data.columns != 'type'].values, \
            train_data.loc[:, train_data.columns == 'type'].values
@@ -199,16 +206,18 @@ def get_train_dataset(train_data, tasks_encoder, val_percentage, scale_data=Fals
     if onehot_encode:
         x = np.concatenate([x] + arrays_store, axis=1)
 
-    encoders = {'education_encoder':education_encoder, 'tasks_encoder':tasks_encoder}
+    encoders = {'tasks_encoder': tasks_encoder}
+    if education_encoders is not None:
+        encoders.update(education_encoders)
 
     if val_percentage == 0:
         return x, None, y, None, encoders, scaler
     x_train, x_val, y_train, y_val = train_test_split(x, y, test_size=val_percentage)
-    return x_train, x_val, y_train, y_val, encoders, scaler
+    return x_train, x_val, y_train, y_val, encoders, Onehot_Encoders, scaler
 
 
-@st.cache
-def get_test_dataset(file, dataset_columns, encoders, scaler, scale_data=False, onehot_encode=False):
+@st.cache(allow_output_mutation=True)
+def get_test_dataset(file, dataset_columns, encoders, Onehot_Encoders, scaler, scale_data=False, onehot_encode=False):
     test_data = pd.read_csv(file, index_col='id')
     data_index = test_data.index.values
     test_data, _ = get_tasks_info(test_data, tasks_encoder=encoders['tasks_encoder'])
@@ -219,11 +228,9 @@ def get_test_dataset(file, dataset_columns, encoders, scaler, scale_data=False, 
     test_data = get_calls_data(test_data)
     test_data = get_education_info(test_data)
 
-
-    if 'Вид образования' in test_data.columns:
-        test_data, _ = process_education_info(test_data, education_encoder=encoders['education_encoder'])
-
     test_data = test_data[dataset_columns]
+    test_data, _ = process_education_info(test_data, encoders)
+
     if scale_data:
         # Список всех столбцов которые подлежат скалированию
         scalar_columns = ['Not Lates', 'Lates', 'Длительность общая', 'activeTime', 'monitorTimeWorking',
@@ -235,13 +242,14 @@ def get_test_dataset(file, dataset_columns, encoders, scaler, scale_data=False, 
         test_data[common_columns] = scaler.transform(test_data[common_columns]) #Скалируем выше-указанные столбцы
 
     if onehot_encode:
-        categorical_columns = ['Вид образования']  # Список всех столбцов которые подлежат onehot кодированию
+        categorical_columns = ['Вид образования', 'Специальность']  # Список всех столбцов которые подлежат onehot кодированию
+        columns_in_dataset = [i for i in categorical_columns if i in test_data.columns]
         arrays_store = []
-        for column in categorical_columns:
+        for column in columns_in_dataset:
             if column in test_data.columns:
-                onehot_data = OneHotEncoder(sparse=False).fit_transform(test_data[column].values.reshape(-1, 1))
+                onehot_data = Onehot_Encoders[column].transform(test_data[column].values.reshape(-1, 1))
                 arrays_store.append(onehot_data)
-        test_data.drop(categorical_columns, axis=1, inplace=True)
+        test_data.drop(columns_in_dataset, axis=1, inplace=True)
 
     x_test, y_test = test_data.loc[:, test_data.columns != 'type'].values, \
                      test_data.loc[:, test_data.columns == 'type'].values

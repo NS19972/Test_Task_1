@@ -124,7 +124,7 @@ class NeuralNetwork:
         y_pred = np.argmax(y_pred, axis=1)
         score = recall_score(y_test.flatten(), y_pred.flatten(), average='micro')
         print(f"Model recall score on test subset is {score}")
-        return score
+        return score, y_pred.flatten()
 
     @classmethod
     def calculate_class_weights(cls, y):

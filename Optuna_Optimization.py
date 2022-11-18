@@ -4,9 +4,10 @@ import argparse
 from models import *
 from misc_functions import *
 
+np.random.seed(seed)  # Устанавливаем сид (sklearn использует сид от numpy)
+tf.random.set_seed(seed)  # Устанавливаем сид для нейросетей
 
 def optuna_optimization(x_train, y_train, x_val, y_val, selected_algorithm, optimization_epochs):
-
     def objective_function(trial):
         kwargs = {}
         if isinstance(selected_algorithm, NeuralNetwork): #Подбор гиперпараметров для нейросети

@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
+import numpy as np
 import streamlit as st
 import os
 
@@ -81,6 +82,11 @@ def create_heatmap(dataset):
 
 
 def create_heatmap_streamlit(dataset):
+    for column in dataset.columns:
+        if dataset[column].dtype not in [int, float]:
+            dataset[column] = LabelEncoder().fit_transform(dataset[column])
+
+
     correlation_matrix = dataset.corr(method='spearman')
     fig, ax = plt.subplots(figsize=(14, 8))
     sns.heatmap(correlation_matrix, annot=True, ax=ax)

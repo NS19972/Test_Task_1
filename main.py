@@ -178,7 +178,7 @@ if __name__ == "__main__":
         if not sst.model_trained:
             sst.algorithm = str_to_algorithm[selected_algorithm](**kwargs)
         train_dataframe = train_dataframe[sst.dataset_columns] #Обрабатываем датасет и формируем x, y для val и train
-        x_train, x_val, y_train, y_val, encoders, scaler = get_train_dataset(
+        x_train, x_val, y_train, y_val, encoders, Onehot_Encoders, scaler = get_train_dataset(
             train_dataframe, tasks_encoder, val_percentage=val_percentage,  # Загружаем обработанный датасет
             scale_data=sst.algorithm.requires_normalization, onehot_encode=sst.algorithm.requires_OHE
         )
@@ -221,7 +221,7 @@ if __name__ == "__main__":
 
         if test_button: #Когда нажимаем на тестовую кнопку:
             x_test, y_test, data_indices = get_test_dataset(  #Собираем тестовый датасет используя кодировщики из обучающей
-                test_file, sst.dataset_columns, encoders, scaler,
+                test_file, sst.dataset_columns, encoders, Onehot_Encoders, scaler,
                 scale_data=sst.algorithm.requires_normalization, onehot_encode=sst.algorithm.requires_OHE
             )
 
