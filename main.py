@@ -40,7 +40,7 @@ if __name__ == "__main__":
     possible_algorithms = ['XGBoost', 'Нейросеть', 'Гауссовский классификатор', 'SVM', 'Дерево Решений', 'Случайный Лес']
     selected_algorithm = st.selectbox(
         "Выберите алгоритм для модели: \n (примечание: модель нужно обучать заново после изменения набора столбцов)",
-        possible_algorithms, key='selected_algorithm')
+        possible_algorithms, key='selected_algorithm', on_change=possible_algorithms_callback)
 
     st.write("Настройте гиперпараметры для модели:")
     if selected_algorithm == possible_algorithms[0]:  #XGBoost
@@ -101,7 +101,7 @@ if __name__ == "__main__":
         use_optuna = st.checkbox("Использовать TPE для автоматического подбора гиперпараметров", key='use_optuna')
 
         if use_optuna:
-            optuna_epochs = st.slider("Кол-во эпох для оптимизации алгоритма с помощью TPE (0 = не использовать автоматическую оптимизацию)",
+            optuna_epochs = st.slider("Кол-во эпох для оптимизации алгоритма с помощью TPE",
                               min_value=1, max_value=1000, value=50, key='optuna_epochs')
 
             st.markdown("""
@@ -134,7 +134,7 @@ if __name__ == "__main__":
     #Окно с возможностью выбора столбцов вылезает при загрузки обучающей выборки
     if train_file is not None:
         label_columns = ['type'] #Список всех столбцов, которые подаются в y_train/y_test (всего один такой столбец)
-        train_dataframe, tasks_encoder = get_dataframe(train_file) #Извлекаем все возможные столбцы из датасета
+        train_dataframe = get_dataframe(train_file) #Извлекаем все возможные столбцы из датасета
 
         #Составляем список всех столбцов, которые можно выбирать или не выбирать.
         #В этот список не попадают столбцы из label_columns
@@ -178,8 +178,8 @@ if __name__ == "__main__":
         if not sst.model_trained:
             sst.algorithm = str_to_algorithm[selected_algorithm](**kwargs)
         train_dataframe = train_dataframe[sst.dataset_columns] #Обрабатываем датасет и формируем x, y для val и train
-        x_train, x_val, y_train, y_val, encoders, Onehot_Encoders, scaler = get_train_dataset(
-            train_dataframe, tasks_encoder, val_percentage=val_percentage,  # Загружаем обработанный датасет
+        x_train, x_val, y_train, y_val, label_encoders, onehot_encoders, scaler = get_train_dataset(
+            train_dataframe, val_percentage=val_percentage,  # Загружаем обработанный датасет
             scale_data=sst.algorithm.requires_normalization, onehot_encode=sst.algorithm.requires_OHE
         )
 
@@ -187,13 +187,22 @@ if __name__ == "__main__":
         # (условие нужно, чтобы модель не обучалась заново при нажатии нерелевантных кнопок)
         if not sst.model_trained:
             if use_optuna:  #Оптимизация кода оптуной
-                kwargs = optuna_optimization(x_train, y_train, x_val, y_val, sst.algorithm, optuna_epochs)
-                #Блок кода, который обнавляет значения в kwargs в зависимости от полученного результата из Оптуны
-                if isinstance(sst.algorithm, SVMAlgorithm):
-                    kwargs['class_weight'] = calculate_class_weights(y_train) if kwargs['use_class_weights'] else None
-                elif isinstance(sst.algorithm, NeuralNetwork):
-                    kwargs['neural_network_hidden_neurons'] = [kwargs[f'layer_{i + 1}_size'] for i in
-                                                               range(kwargs['hidden_layers'])]
+                if val_percentage == 0:
+                    st.error("Нужно указать размер валидационной выборки >0 для использования Оптуны")
+                    st.stop()
+                else:
+                    optuna_kwargs = optuna_optimization(x_train, y_train, x_val, y_val, sst.algorithm, optuna_epochs)
+                    kwargs.update(optuna_kwargs)
+                    #Блок кода, который обнавляет значения в kwargs в зависимости от полученного результата из Оптуны
+                    if isinstance(sst.algorithm, SVMAlgorithm):
+                        kwargs['class_weight'] = calculate_class_weights(y_train) if kwargs['use_class_weights'] else None
+                    elif isinstance(sst.algorithm, NeuralNetwork):
+                        kwargs['neural_network_hidden_neurons'] = [kwargs[f'layer_{i + 1}_size'] for i in
+                                                                   range(kwargs['hidden_layers'])]
+
+                    #Пересоздаем модель, на этот раз используя гиперпараметры которая подобрала Оптуна
+                    sst.algorithm = str_to_algorithm[selected_algorithm](**kwargs)
+
             sst.algorithm.train(x_train, y_train)  # Обучаем алгоритм
 
             # Валидируем на обучающей выборке
@@ -211,7 +220,7 @@ if __name__ == "__main__":
 
         #Создаем загрузщик для тестового файла
         test_file = st.file_uploader("Загрузите тестовую выборку", key='upload_test_dataset', type=["csv"],
-                                     on_change=upload_test_dataset)
+                                     on_change=test_buttons_callback)
         st.markdown("---")
 
         #Кнопка для теста
@@ -221,11 +230,15 @@ if __name__ == "__main__":
 
         if test_button: #Когда нажимаем на тестовую кнопку:
             x_test, y_test, data_indices = get_test_dataset(  #Собираем тестовый датасет используя кодировщики из обучающей
-                test_file, sst.dataset_columns, encoders, Onehot_Encoders, scaler,
+                test_file, sst.dataset_columns, label_encoders, onehot_encoders, scaler,
                 scale_data=sst.algorithm.requires_normalization, onehot_encode=sst.algorithm.requires_OHE
             )
 
-            test_score, predictions = sst.algorithm.test(x_test, y_test) #Тестируем
+            try:
+                test_score, predictions = sst.algorithm.test(x_test, y_test) #Тестируем
+            except ValueError:
+                st.error("Необходимо заново обучить модель после изменения набора столбцов")
+                st.stop()
             # Выводим точность на тестовой выборке в стримлит
             st.info(f"Точность модели на тестовой выборке: {round(100*test_score, 3)}%")
 

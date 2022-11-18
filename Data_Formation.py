@@ -50,7 +50,7 @@ def process_education_info(data, encoders=None):
 
 #Функция которая извлекает и обрабатывает данные из файла Tasks.csv
 #Данные парсяться чтобы получить количество просроченных и не-просроченных задач каждого соотрудника
-def get_tasks_info(input_data, tasks_encoder=None):
+def get_tasks_info(input_data):
     #Берём только столбец 'Статус по просрочке' из этого датасета (остальные данные либо признаны не важными, либо слишком разбалансированные)
     #ПРИМЕЧАНИЕ - У нас примерно в 5 раз больше предметов с просрочкой чем без (Статус по просрочке)
     #Позже столбец по просрочкам делится на два столбца - 'Просрочено' и 'Не Просрочено'
@@ -59,11 +59,9 @@ def get_tasks_info(input_data, tasks_encoder=None):
 
     tasks_data = pd.read_csv('dataset/Tasks.csv', dtype='object') #Читаем датасет
 
-    if tasks_encoder is None:
-        tasks_encoder = LabelEncoder()
-        tasks_encoder.fit(tasks_data['Статус по просрочке'].values) #Кодируем строки в числа (0 или 1 по сколько у нас две категории)
+    tasks_encoder = {'Без нарушения срока': 0, 'С нарушением срока': 1}
 
-    lates_column = tasks_encoder.transform(tasks_data['Статус по просрочке'].values).flatten()  # Кодируем строки в числа (0 или 1 по сколько у нас две категории)
+    lates_column = [tasks_encoder[i] for i in tasks_data['Статус по просрочке'].values] # Кодируем строки в числа (0 или 1 по сколько у нас две категории)
 
     n_values = 2 #Указываем, что у нас всегда 2 категории
     lates_column_categorical = np.eye(n_values)[lates_column]  #Переводим числа в onehot вектор
@@ -79,7 +77,7 @@ def get_tasks_info(input_data, tasks_encoder=None):
     data = input_data.join(tasks_data, how='left') #Стоит отметить - из-за join появляются NaN-ы по сколько не для всех работников есть данные
     data[tasks_data.columns.values] = data[tasks_data.columns.values].fillna(0)   #Везде где у нас нет данных на количество задач - записываем 0
 
-    return data, tasks_encoder #Возвращаем данные и кодировщик
+    return data #Возвращаем данные и кодировщик
 
 
 #Функция которая извлекает и обрабатывает данные из файла SKUD.csv
@@ -161,18 +159,18 @@ def get_calls_data(input_data):
 @st.cache
 def get_dataframe(file):
     data = pd.read_csv(file, index_col='id')
-    data, tasks_encoder = get_tasks_info(data)
+    data = get_tasks_info(data)
     data = get_skud_data(data)
     data = get_connection_data(data)
     data = get_working_data(data)
     data = get_network_data(data)
     data = get_calls_data(data)
     data = get_education_info(data)
-    return data, tasks_encoder
+    return data
 
 #Главная функция файла - извлекает и обрабатывает все данные для обучения и валидации
 @st.cache(allow_output_mutation=True)
-def get_train_dataset(train_data, tasks_encoder, val_percentage, scale_data=False, onehot_encode=False):
+def get_train_dataset(train_data, val_percentage, scale_data=False, onehot_encode=False):
     train_data, education_encoders = process_education_info(train_data)
     #Масштабирование скалярных значений (преведенье столбцов в ст. распределение)
     scaler = StandardScaler()
@@ -186,7 +184,7 @@ def get_train_dataset(train_data, tasks_encoder, val_percentage, scale_data=Fals
 
         train_data[common_columns] = scaler.fit_transform(train_data[common_columns]) #Скалируем выше-указанные столбцы
 
-    Onehot_Encoders = {}
+    onehot_encoders = {}
     if onehot_encode:
         categorical_columns = ['Вид образования', 'Специальность'] #Список всех столбцов которые подлежат onehot кодированию
         columns_in_dataset = [i for i in categorical_columns if i in train_data.columns]
@@ -195,7 +193,7 @@ def get_train_dataset(train_data, tasks_encoder, val_percentage, scale_data=Fals
             if column in train_data.columns:
                 OHE_encoder = OneHotEncoder(sparse=False, min_frequency=10, handle_unknown='infrequent_if_exist')
                 onehot_data = OHE_encoder.fit_transform(train_data[column].values.reshape(-1, 1))
-                Onehot_Encoders[column] = OHE_encoder
+                onehot_encoders[column] = OHE_encoder
                 arrays_store.append(onehot_data)
 
         train_data.drop(columns_in_dataset, axis=1, inplace=True)
@@ -206,21 +204,21 @@ def get_train_dataset(train_data, tasks_encoder, val_percentage, scale_data=Fals
     if onehot_encode:
         x = np.concatenate([x] + arrays_store, axis=1)
 
-    encoders = {'tasks_encoder': tasks_encoder}
+    label_encoders = {}
     if education_encoders is not None:
-        encoders.update(education_encoders)
+        label_encoders.update(education_encoders)
 
     if val_percentage == 0:
-        return x, None, y, None, encoders, scaler
+        return x, None, y, None, label_encoders, onehot_encoders, scaler
     x_train, x_val, y_train, y_val = train_test_split(x, y, test_size=val_percentage)
-    return x_train, x_val, y_train, y_val, encoders, Onehot_Encoders, scaler
+    return x_train, x_val, y_train, y_val, label_encoders, onehot_encoders, scaler
 
 
 @st.cache(allow_output_mutation=True)
-def get_test_dataset(file, dataset_columns, encoders, Onehot_Encoders, scaler, scale_data=False, onehot_encode=False):
+def get_test_dataset(file, dataset_columns, label_encoders, onehot_encoders, scaler, scale_data=False, onehot_encode=False):
     test_data = pd.read_csv(file, index_col='id')
     data_index = test_data.index.values
-    test_data, _ = get_tasks_info(test_data, tasks_encoder=encoders['tasks_encoder'])
+    test_data = get_tasks_info(test_data)
     test_data = get_skud_data(test_data)
     test_data = get_connection_data(test_data)
     test_data = get_working_data(test_data)
@@ -229,7 +227,7 @@ def get_test_dataset(file, dataset_columns, encoders, Onehot_Encoders, scaler, s
     test_data = get_education_info(test_data)
 
     test_data = test_data[dataset_columns]
-    test_data, _ = process_education_info(test_data, encoders)
+    test_data, _ = process_education_info(test_data, label_encoders)
 
     if scale_data:
         # Список всех столбцов которые подлежат скалированию
@@ -247,7 +245,7 @@ def get_test_dataset(file, dataset_columns, encoders, Onehot_Encoders, scaler, s
         arrays_store = []
         for column in columns_in_dataset:
             if column in test_data.columns:
-                onehot_data = Onehot_Encoders[column].transform(test_data[column].values.reshape(-1, 1))
+                onehot_data = onehot_encoders[column].transform(test_data[column].values.reshape(-1, 1))
                 arrays_store.append(onehot_data)
         test_data.drop(columns_in_dataset, axis=1, inplace=True)
 

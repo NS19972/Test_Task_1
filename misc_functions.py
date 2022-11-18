@@ -10,6 +10,7 @@ def calculate_class_weights(y):
     weights_dict = {i: j for i, j in enumerate(counts)}
     return weights_dict
 
+
 def select_columns(file):
     if file is not None:
         train_dataframe, _ = get_dataframe(file)
@@ -18,15 +19,19 @@ def select_columns(file):
                        )
     return file, dataset_columns
 
+
 def train_buttons_callback():
     sst.train_button_clicked = True
     sst.model_trained = False
 
+
 def test_buttons_callback():
     sst.train_button_clicked = True
 
-def upload_test_dataset():
-    sst.train_button_clicked = True
+
+def possible_algorithms_callback():
+    sst.train_button_clicked = False
+
 
 def selected_algorithm():
     sst.model_trained = False

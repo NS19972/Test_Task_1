@@ -18,7 +18,7 @@ class GradientBoostingAlgorithm:
     def __init__(self, **kwargs):
         self.model = GradientBoostingClassifier(
             n_estimators=kwargs['n_estimators'], max_depth=kwargs['GB_max_depth'],
-            learning_rate=kwargs['GB_learning_rate'], min_samples_split = kwargs['min_samples_split']
+            learning_rate=kwargs['GB_learning_rate'], min_samples_split=kwargs['min_samples_split']
             )  # Задаем параметры алгоритма
 
     def train(self, x_train, y_train):
@@ -48,7 +48,7 @@ class SVMAlgorithm(GradientBoostingAlgorithm):
     requires_OHE = True            #SVM ТРЕБУЕТ onehot кодирования
     requires_normalization = False #SVM не требует нормализации
     def __init__(self, **kwargs):
-        self.model = SVC(C = kwargs['C'], class_weight = kwargs['class_weight'], kernel = kwargs['kernel'])  # Создаем объект алгоритма SVC
+        self.model = SVC(C=kwargs['C'], class_weight=kwargs['class_weight'], kernel=kwargs['kernel'])  # Создаем объект алгоритма SVC
 
     @classmethod
     def calculate_class_weights(cls, y):
@@ -64,8 +64,8 @@ class DecisionTreeAlgorithm(GradientBoostingAlgorithm):
     requires_OHE = False           #Дерево решений не требует onehot кодирования
     requires_normalization = False #Дерево решений не требует нормализации
     def __init__(self, **kwargs):
-        self.model = DecisionTreeClassifier(max_depth = kwargs['Tree_max_depth'], criterion=kwargs['criterion'],
-                                            min_samples_split = kwargs['min_samples_split']
+        self.model = DecisionTreeClassifier(max_depth=kwargs['Tree_max_depth'], criterion=kwargs['criterion'],
+                                            min_samples_split=kwargs['min_samples_split']
                                             )  # Создаем объект алгоритма DecisionTreeClassifier
 
 
@@ -74,7 +74,7 @@ class RandomForestAlgorithm(GradientBoostingAlgorithm):
     requires_normalization = False #Рандомный лес не требует нормализации
     def __init__(self, **kwargs):
         self.model = RandomForestClassifier(n_estimators=kwargs['n_estimators'], max_depth=kwargs['Tree_max_depth'],
-                                            min_samples_split = kwargs['min_samples_split']
+                                            min_samples_split=kwargs['min_samples_split']
                                             ) # Создаем объект алгоритма RandomForestClassifier
 
 
@@ -82,7 +82,7 @@ class GaussianAlgorithm(GradientBoostingAlgorithm):
     requires_OHE = True           #Гауссовский алгоритм ТРЕБУЕТ onehot кодирования
     requires_normalization = True #Гауссовский алгоритм ТРЕБУЕТ onehot кодирования
     def __init__(self, **kwargs):
-        self.model = GaussianProcessClassifier(max_iter_predict = kwargs['max_iter_predict'],
+        self.model = GaussianProcessClassifier(max_iter_predict=kwargs['max_iter_predict'],
                                                warm_start=kwargs['warm_start'])  # Создаем объект алгоритма Gaussian
 
 
@@ -90,7 +90,7 @@ class NeuralNetwork:
     requires_OHE = True           #Нейронная сеть ТРЕБУЕТ onehot кодирования
     requires_normalization = True #Нейронная сеть ТРЕБУЕТ onehot кодирования
     def __init__(self, **kwargs):
-        neural_network_hidden_neurons = self.filter_zeros(kwargs['neural_network_hidden_neurons'])
+        neural_network_hidden_neurons=self.filter_zeros(kwargs['neural_network_hidden_neurons'])
 
         self.model = tf.keras.Sequential(
             layers=[tf.keras.layers.Dense(i, activation='relu') for i in neural_network_hidden_neurons]

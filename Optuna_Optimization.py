@@ -71,9 +71,16 @@ def optuna_optimization(x_train, y_train, x_val, y_val, selected_algorithm, opti
         val_score = algorithm.validate(x_val, y_val) # Оптимизируем патамерты только на валидационной выборке
         return val_score
 
+    my_bar = st.progress(0)
+    percent_progress = 0.0
+
+    def optuna_progress_bar(study, frozen_trial):
+        nonlocal my_bar, percent_progress
+        percent_progress += 1/optimization_epochs
+        my_bar.progress(percent_progress)
 
     study = optuna.create_study(direction="maximize", storage=optuna.storages.RDBStorage(
-        url=f'sqlite:///optimization.db', engine_kwargs={"connect_args": {"timeout": 100}})
-                                )
-    study.optimize(objective_function, n_trials=optimization_epochs)
+        url=f'sqlite:///optimization.db', engine_kwargs={"connect_args": {"timeout": 100}}))
+
+    study.optimize(objective_function, n_trials=optimization_epochs, callbacks=[optuna_progress_bar])
     return study.best_params
