@@ -156,7 +156,7 @@ def get_calls_data(input_data):
     data[columns_to_fill] = data[columns_to_fill].fillna(0)          #Записываем 0 туда, где нет данных
     return data
 
-@st.cache
+@st.cache(allow_output_mutation=True)
 def get_dataframe(file):
     data = pd.read_csv(file, index_col='id')
     data = get_tasks_info(data)

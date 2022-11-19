@@ -15,8 +15,8 @@ def analyze_class_frequency(dataset):
     classes = dataset['type']
     unique_categories, counts = np.unique(classes.values, return_counts=True)  # Считаем как часто каждая категория встречается
 
-    plt.figure(figsize = (14, 8))
-    plt.pie(counts, labels = [f"Class {i}" for i in range(len(counts))], autopct=lambda pct: func(pct))
+    plt.figure(figsize=(14, 8))
+    plt.pie(counts, labels=[f"Class {i}" for i in range(len(counts))], autopct=lambda pct: func(pct))
     plt.title("Относительное количество каждого класса в выборке")
     plt.show()
 
@@ -27,16 +27,27 @@ def create_cdf_streamlit(data_column):
     ax.hist(data_column, bins=200, color='red', cumulative=True, alpha=0.5)
     ax.set_title('кумулятивная функция распределения')
     ax.grid()
-    st.sidebar.write(fig)
+    return fig
 
 
 @st.cache(allow_output_mutation=True)
 def create_histogram_streamlit(data_column):
+    # Считаем как часто каждая категория встречается
+    unique_categories, counts = np.unique(data_column.astype(str).values, return_counts=True)
+
+    # Создаем словарь из полученных категорий и сколько раз они встречаются
+    frequency_dict = dict(zip(unique_categories, counts))
+
+    # Переводим все редкие категории, а также категорию nan в Other
+    infrequent_categories = [k for k, v in frequency_dict.items() if v < 10 or k == 'nan']
+    for category in infrequent_categories:
+        data_column.loc[data_column == category] = 'Другое'
+
     fig, ax = plt.subplots(figsize=(14, 8))
-    ax.hist(data_column, color='orange', cumulative=True, alpha=0.5)
+    ax.hist(data_column, color='orange', align='mid', cumulative=True, alpha=0.5)
     ax.set_title('гистограмма')
     ax.grid()
-    st.sidebar.write(fig)
+    return fig
 
 
 # Функция analyze_class_frequency, адаптированна для стримлита
@@ -48,9 +59,9 @@ def analyze_class_frequency_streamlit(dataset):
     unique_categories, counts = np.unique(classes.values, return_counts=True)  # Считаем как часто каждая категория встречается
 
     fig, ax = plt.subplots(figsize=(14, 8))
-    ax.pie(counts, labels = [f"Class {i}" for i in range(len(counts))], autopct=lambda pct: func(pct))
+    ax.pie(counts, labels=[f"Class {i}" for i in range(len(counts))], autopct=lambda pct: func(pct))
     ax.set_title("Относительное количество каждого класса в выборке")
-    st.sidebar.write(fig)
+    return fig
 
 
 # Данная функция выводит КУМУЛЯТИВНЫЕ гистограммы
@@ -100,6 +111,7 @@ def create_heatmap(dataset):
     plt.title("Матрица корреляции")
     plt.show()
 
+
 # Функция create_heatmap, адаптированна для стримлита
 def create_heatmap_streamlit(dataset):
     for column in dataset.columns:
@@ -111,7 +123,7 @@ def create_heatmap_streamlit(dataset):
     fig, ax = plt.subplots(figsize=(14, 8))
     sns.heatmap(correlation_matrix, annot=True, ax=ax)
     ax.set_title("Матрица корреляции")
-    st.sidebar.write(fig)
+    return fig
 
 
 if __name__ == "__main__":

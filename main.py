@@ -176,13 +176,23 @@ if __name__ == "__main__":
 
 
         if draw_heatmap:
-            create_heatmap_streamlit(train_dataframe[sst.dataset_columns])  # Функция для вывода матрицы корреляции
+            # Функция для вывода матрицы корреляции
+            st.sidebar.pyplot(create_heatmap_streamlit(train_dataframe[sst.dataset_columns]))
         elif draw_class_histogram:
-            analyze_class_frequency_streamlit(train_dataframe)  # Функция для вывода круговой диаграммы классов
+            # Функция для вывода круговой диаграммы классов
+            st.sidebar.pyplot(analyze_class_frequency_streamlit(train_dataframe))
 
         st.sidebar.markdown('---')
         column_for_analysis = st.sidebar.selectbox("Выберите столбец для визуализации данных: ", options=selected_columns)
         show_graph_button = st.sidebar.button("Визуализировать")
+
+        if show_graph_button:
+            if column_for_analysis in scalar_columns:
+                st.sidebar.pyplot(create_cdf_streamlit(train_dataframe[column_for_analysis]))
+            elif column_for_analysis in categorical_columns:
+                st.sidebar.pyplot(create_histogram_streamlit(train_dataframe[column_for_analysis]))
+            else:
+                st.sidebar.error("Неопознанный столбец")
 
     # При нажатии на кпонку "Обучение"
     if sst.train_button_clicked:
