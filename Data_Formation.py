@@ -175,19 +175,12 @@ def get_train_dataset(train_data, val_percentage, scale_data=False, onehot_encod
     #Масштабирование скалярных значений (преведенье столбцов в ст. распределение)
     scaler = StandardScaler()
     if scale_data:
-        # Список всех столбцов которые подлежат скалированию
-        scalar_columns = ['Not Lates', 'Lates', 'Длительность общая', 'activeTime', 'monitorTimeWorking',
-                          'monitorTimeNetwork', 'Время опоздания', 'Признак опоздания', 'NumberOfInCalls',
-                          'InCallTime', 'NumberOfOutCalls', 'OutCallTime']
-
-        common_columns = [i for i in train_data.columns.values if i in scalar_columns]
-
-        train_data[common_columns] = scaler.fit_transform(train_data[common_columns]) #Скалируем выше-указанные столбцы
+        common_columns = [i for i in train_data.columns.values if i in scalar_columns]  # Список всех столбцов которые подлежат скалированию
+        train_data[common_columns] = scaler.fit_transform(train_data[common_columns])  # Скалируем выше-указанные столбцы
 
     onehot_encoders = {}
     if onehot_encode:
-        categorical_columns = ['Вид образования', 'Специальность'] #Список всех столбцов которые подлежат onehot кодированию
-        columns_in_dataset = [i for i in categorical_columns if i in train_data.columns]
+        columns_in_dataset = [i for i in categorical_columns if i in train_data.columns]  # Список всех столбцов которые подлежат onehot кодированию
         arrays_store = []
         for column in columns_in_dataset:
             if column in train_data.columns:
@@ -230,18 +223,11 @@ def get_test_dataset(file, dataset_columns, label_encoders, onehot_encoders, sca
     test_data, _ = process_education_info(test_data, label_encoders)
 
     if scale_data:
-        # Список всех столбцов которые подлежат скалированию
-        scalar_columns = ['Not Lates', 'Lates', 'Длительность общая', 'activeTime', 'monitorTimeWorking',
-                          'monitorTimeNetwork', 'Время опоздания', 'Признак опоздания', 'NumberOfInCalls',
-                          'InCallTime', 'NumberOfOutCalls', 'OutCallTime']
-
-        common_columns = [i for i in test_data.columns.values if i in scalar_columns]
-
-        test_data[common_columns] = scaler.transform(test_data[common_columns]) #Скалируем выше-указанные столбцы
+        common_columns = [i for i in test_data.columns.values if i in scalar_columns]  # Список всех столбцов которые подлежат скалированию
+        test_data[common_columns] = scaler.transform(test_data[common_columns])  # Скалируем выше-указанные столбцы
 
     if onehot_encode:
-        categorical_columns = ['Вид образования', 'Специальность']  # Список всех столбцов которые подлежат onehot кодированию
-        columns_in_dataset = [i for i in categorical_columns if i in test_data.columns]
+        columns_in_dataset = [i for i in categorical_columns if i in test_data.columns]  # Список всех столбцов которые подлежат onehot кодированию
         arrays_store = []
         for column in columns_in_dataset:
             if column in test_data.columns:
@@ -249,8 +235,7 @@ def get_test_dataset(file, dataset_columns, label_encoders, onehot_encoders, sca
                 arrays_store.append(onehot_data)
         test_data.drop(columns_in_dataset, axis=1, inplace=True)
 
-    x_test, y_test = test_data.loc[:, test_data.columns != 'type'].values, \
-                     test_data.loc[:, test_data.columns == 'type'].values
+    x_test, y_test = test_data.loc[:, test_data.columns != 'type'].values, test_data.loc[:, test_data.columns == 'type'].values
 
     if onehot_encode:
         x_test = np.concatenate([x_test] + arrays_store, axis=1)

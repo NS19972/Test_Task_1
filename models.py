@@ -9,6 +9,7 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.metrics import recall_score
 from sklearn.svm import *
 from constants import *
+from misc_functions import calculate_class_weights
 
 np.random.seed(seed)   #Устанавливаем сид (sklearn использует сид от numpy)
 
@@ -18,7 +19,8 @@ class GradientBoostingAlgorithm:
     def __init__(self, **kwargs):
         self.model = GradientBoostingClassifier(
             n_estimators=kwargs['n_estimators'], max_depth=kwargs['GB_max_depth'],
-            learning_rate=kwargs['GB_learning_rate'], min_samples_split=kwargs['min_samples_split']
+            learning_rate=kwargs['GB_learning_rate'], min_samples_split=kwargs['min_samples_split'],
+            random_state=kwargs['random_state']
             )  # Задаем параметры алгоритма
 
     def train(self, x_train, y_train):
@@ -36,26 +38,13 @@ class GradientBoostingAlgorithm:
         print(f"Model recall score on test subset is {score}")
         return score, y_pred
 
-    @classmethod
-    def calculate_class_weights(cls, y):
-        unique_categories, counts = np.unique(y, return_counts=True)
-        counts = counts/counts.sum()
-        weights_dict = {i: j for i, j in enumerate(counts)}
-        return weights_dict
-
 
 class SVMAlgorithm(GradientBoostingAlgorithm):
     requires_OHE = True            #SVM ТРЕБУЕТ onehot кодирования
-    requires_normalization = False #SVM не требует нормализации
+    requires_normalization = True  #SVM ТРЕБУЕТ нормализации
     def __init__(self, **kwargs):
-        self.model = SVC(C=kwargs['C'], class_weight=kwargs['class_weight'], kernel=kwargs['kernel'])  # Создаем объект алгоритма SVC
-
-    @classmethod
-    def calculate_class_weights(cls, y):
-        unique_categories, counts = np.unique(y, return_counts=True)
-        counts = counts/counts.sum()
-        weights_dict = {i: j for i, j in enumerate(counts)}
-        return weights_dict
+        self.model = SVC(C=kwargs['C'], class_weight=kwargs['class_weight'], kernel=kwargs['kernel'],
+                         random_state=kwargs['random_state'])  # Создаем объект алгоритма SVC
 
 
 #Практика показывает, что именно дерево решений достигает максимально высокой точности на тестовой выборке (~30%)
@@ -65,7 +54,8 @@ class DecisionTreeAlgorithm(GradientBoostingAlgorithm):
     requires_normalization = False #Дерево решений не требует нормализации
     def __init__(self, **kwargs):
         self.model = DecisionTreeClassifier(max_depth=kwargs['Tree_max_depth'], criterion=kwargs['criterion'],
-                                            min_samples_split=kwargs['min_samples_split']
+                                            min_samples_split=kwargs['min_samples_split'],
+                                            random_state=kwargs['random_state']
                                             )  # Создаем объект алгоритма DecisionTreeClassifier
 
 
@@ -74,7 +64,8 @@ class RandomForestAlgorithm(GradientBoostingAlgorithm):
     requires_normalization = False #Рандомный лес не требует нормализации
     def __init__(self, **kwargs):
         self.model = RandomForestClassifier(n_estimators=kwargs['n_estimators'], max_depth=kwargs['Tree_max_depth'],
-                                            min_samples_split=kwargs['min_samples_split']
+                                            min_samples_split=kwargs['min_samples_split'],
+                                            random_state=kwargs['random_state']
                                             ) # Создаем объект алгоритма RandomForestClassifier
 
 
@@ -83,7 +74,8 @@ class GaussianAlgorithm(GradientBoostingAlgorithm):
     requires_normalization = True #Гауссовский алгоритм ТРЕБУЕТ onehot кодирования
     def __init__(self, **kwargs):
         self.model = GaussianProcessClassifier(max_iter_predict=kwargs['max_iter_predict'],
-                                               warm_start=kwargs['warm_start'])  # Создаем объект алгоритма Gaussian
+                                               warm_start=kwargs['warm_start'],
+                                               random_state=kwargs['random_state'])  # Создаем объект алгоритма Gaussian
 
 
 class NeuralNetwork:
@@ -91,6 +83,8 @@ class NeuralNetwork:
     requires_normalization = True #Нейронная сеть ТРЕБУЕТ onehot кодирования
     def __init__(self, **kwargs):
         neural_network_hidden_neurons=self.filter_zeros(kwargs['neural_network_hidden_neurons'])
+        np.random.seed(kwargs['random_state'])
+        tf.keras.utils.set_random_seed(kwargs['random_state'])
 
         self.model = tf.keras.Sequential(
             layers=[tf.keras.layers.Dense(i, activation='relu') for i in neural_network_hidden_neurons]
@@ -103,7 +97,7 @@ class NeuralNetwork:
         self.kwargs = kwargs
 
     def train(self, x_train, y_train):
-        class_weights = self.calculate_class_weights(y_train) if self.kwargs['use_class_weights'] else None
+        class_weights = calculate_class_weights(y_train) if self.kwargs['use_class_weights'] else None
         x_train = np.array(x_train, ndmin=2)
         y_train = np.array(y_train, ndmin=2)
         self.model.fit(x_train, y_train, epochs=self.kwargs['num_epochs'], batch_size=self.kwargs['batch_size'], class_weight=class_weights)
@@ -126,13 +120,8 @@ class NeuralNetwork:
         print(f"Model recall score on test subset is {score}")
         return score, y_pred.flatten()
 
-    @classmethod
-    def calculate_class_weights(cls, y):
-        unique_categories, counts = np.unique(y, return_counts=True)
-        counts = counts/counts.sum()
-        weights_dict = {i: j for i, j in enumerate(counts)}
-        return weights_dict
-
+    # Метод, который принимает на вход список (количество нейронов в каждом слое), и удаляет всё в списке, что находится
+    # после первого нуля (включая сам 0).
     @classmethod
     def filter_zeros(cls, array):
         result = []

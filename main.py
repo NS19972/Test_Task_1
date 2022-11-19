@@ -88,6 +88,11 @@ if __name__ == "__main__":
         kwargs['min_samples_split'] = st.slider("Минимальное число сэмплов для деления дерева", min_value=2,
                                                 max_value=5, value=2)
 
+    with st.expander("Продвинутые опции"):
+        kwargs['random_state'] = st.number_input("Рандомное состояние", value=100)
+
+    st.markdown('---')
+
     with st.expander("Использовать автоматический подбор гиперпараметров"):
         st.write("""
             TPE (Tree-Structured Parzen Estimator) - алгоритм, который основан на Байесовских методах, и используется для подбора гиперпараметров.
@@ -169,10 +174,15 @@ if __name__ == "__main__":
                 help="Нажмите на кнопку чтобы посмотреть гистограмму классов с столбца 'type'"
             )
 
+
         if draw_heatmap:
             create_heatmap_streamlit(train_dataframe[sst.dataset_columns])  # Функция для вывода матрицы корреляции
         elif draw_class_histogram:
             analyze_class_frequency_streamlit(train_dataframe)  # Функция для вывода круговой диаграммы классов
+
+        st.sidebar.markdown('---')
+        column_for_analysis = st.sidebar.selectbox("Выберите столбец для визуализации данных: ", options=selected_columns)
+        show_graph_button = st.sidebar.button("Визуализировать")
 
     # При нажатии на кпонку "Обучение"
     if sst.train_button_clicked:
@@ -192,7 +202,8 @@ if __name__ == "__main__":
                     st.error("Нужно указать размер валидационной выборки >0 для использования Оптуны")
                     st.stop()
                 else:
-                    optuna_kwargs = optuna_optimization(x_train, y_train, x_val, y_val, sst.algorithm, optuna_epochs)
+                    optuna_kwargs = optuna_optimization(x_train, y_train, x_val, y_val, sst.algorithm,
+                                                        optuna_epochs, kwargs)
                     kwargs.update(optuna_kwargs)
                     # Блок кода, который обновляет значения в kwargs в зависимости от полученного результата из Оптуны
                     if isinstance(sst.algorithm, SVMAlgorithm):
@@ -238,7 +249,9 @@ if __name__ == "__main__":
             # Тестируем
             try:  # Пытаемся выполнить код (получается ValueError если пользователь поменял набор столбцов после трейна)
                 test_score, predictions = sst.algorithm.test(x_test, y_test)
-            except ValueError:  # При возникновении ValueError, сообщаем причину ошибки пользователю и просим переобучить модель
+            # При возникновении ValueError, сообщаем причину ошибки пользователю и просим переобучить модель
+            # При использовании нейросети возникает tf.errors.InvalidArgumentError вместо ValueError - но суть та же
+            except (ValueError, tf.errors.InvalidArgumentError):
                 st.error("Необходимо заново обучить модель после изменения набора столбцов")
                 st.stop()
             # Выводим точность на тестовой выборке в стримлит

@@ -21,6 +21,25 @@ def analyze_class_frequency(dataset):
     plt.show()
 
 
+@st.cache(allow_output_mutation=True)
+def create_cdf_streamlit(data_column):
+    fig, ax = plt.subplots(figsize=(14, 8))
+    ax.hist(data_column, bins=200, color='red', cumulative=True, alpha=0.5)
+    ax.set_title('кумулятивная функция распределения')
+    ax.grid()
+    st.sidebar.write(fig)
+
+
+@st.cache(allow_output_mutation=True)
+def create_histogram_streamlit(data_column):
+    fig, ax = plt.subplots(figsize=(14, 8))
+    ax.hist(data_column, color='orange', cumulative=True, alpha=0.5)
+    ax.set_title('гистограмма')
+    ax.grid()
+    st.sidebar.write(fig)
+
+
+# Функция analyze_class_frequency, адаптированна для стримлита
 def analyze_class_frequency_streamlit(dataset):
     def func(pct):
         return "{:1.1f}%".format(pct)
@@ -34,10 +53,9 @@ def analyze_class_frequency_streamlit(dataset):
     st.sidebar.write(fig)
 
 
-#Данная функция выводит КУМУЛЯТИВНЫЕ гистограммы
-#Именно кумулятивные гистограммы нам показывают, что почти все данные для всех столбцов находяться около нуля
-#Примерно половина данных имеют нулевые значения (от части из-за того, что nan-ы заполняются нулями)
-@st.cache
+# Данная функция выводит КУМУЛЯТИВНЫЕ гистограммы
+# Именно кумулятивные гистограммы нам показывают, что почти все данные для всех столбцов находяться около нуля
+# Примерно половина данных имеют нулевые значения (от части из-за того, что nan-ы заполняются нулями)
 def analyze_calls_data(dataset):
     dataset = dataset[['NumberOfInCalls', 'InCallTime', 'NumberOfOutCalls', 'OutCallTime']]
     colors_list = ['blue', 'red', 'green', 'orange']
@@ -55,7 +73,6 @@ def analyze_calls_data(dataset):
     plt.show()
 
 
-@st.cache
 def analyze_monitor_data(dataset):
     dataset = dataset[['activeTime', 'monitorTimeWorking', 'monitorTimeNetwork']]
     colors_list = ['blue', 'green', 'orange']
@@ -74,13 +91,16 @@ def analyze_monitor_data(dataset):
 
 
 def create_heatmap(dataset):
+    for column in dataset.columns:
+        if dataset[column].dtype not in [int, float]:
+            dataset[column] = LabelEncoder().fit_transform(dataset[column])
     correlation_matrix = dataset.corr(method='spearman')
     plt.figure(figsize=(14, 8))
     sns.heatmap(correlation_matrix, annot=True)
     plt.title("Матрица корреляции")
     plt.show()
 
-
+# Функция create_heatmap, адаптированна для стримлита
 def create_heatmap_streamlit(dataset):
     for column in dataset.columns:
         if dataset[column].dtype not in [int, float]:
