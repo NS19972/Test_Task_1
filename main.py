@@ -25,9 +25,18 @@ if __name__ == "__main__":
     )
     st.image('title_image.jpg')
 
+    st.markdown("---")
     st.write("Данное приложение дает возможность создать собственный алгоритм для прогноза будущих карьерных перспектив"
              "сотрудника компании. Вы можете выбрать любой алгоритм из списка предоставленных, а также, при желании, "
              "Вы сможете самостоятельно подбирать гиперпараметры для выбранного Вами алгоритма.")
+
+    with st.expander("Прочитать про функционал и особенности различных алгоритмов:"):
+        st.markdown("* [Нейронные сети](https://academy.yandex.ru/handbook/ml/article/pervoe-znakomstvo-s-polnosvyaznymi-nejrosetyami) \n"
+                    "* [Градиентный бустинг](https://academy.yandex.ru/handbook/ml/article/gradientnyj-busting) \n"
+                    "* [Гауссовский Классификатор](https://scikit-learn.ru/1-7-gaussian-processes/) \n"
+                    "* [Метод Опорных Векторов](https://machinelearningmastery.ru/the-complete-guide-to-support-vector-machine-svm-f1a820d8af0b/) \n"
+                    "* [Случайный Лес](https://academy.yandex.ru/handbook/ml/article/ansambli-v-mashinnom-obuchenii) \n"
+                    "* [Дерево Решений](https://loginom.ru/blog/decision-tree-p1)")
 
 
     st.write("Чтобы обучить алгоритм, необходимо загрузить файл с id сотрудников и их карьерных данных в обучающую"
@@ -37,7 +46,7 @@ if __name__ == "__main__":
     train_file = st.file_uploader("Загрузите обучающую выборку", key='upload_train_dataset', type=["csv"])
     st.markdown("---")
 
-    possible_algorithms = ['XGBoost', 'Нейросеть', 'Гауссовский классификатор', 'SVM', 'Дерево Решений', 'Случайный Лес']
+    possible_algorithms = ['XGBoost', 'Нейросеть', 'Гауссовский классификатор', 'Метод Опорных Векторов', 'Дерево Решений', 'Случайный Лес']
     selected_algorithm = st.selectbox(
         "Выберите алгоритм для модели: \n (примечание: модель нужно обучать заново после изменения набора столбцов)",
         possible_algorithms, key='selected_algorithm', on_change=possible_algorithms_callback)
@@ -68,7 +77,7 @@ if __name__ == "__main__":
         kwargs['max_iter_predict'] = st.slider("Максимальное число итераций", min_value=10, max_value=500, value=100)
         kwargs['warm_start'] = st.checkbox("Использовать 'тёплое' начало (игнорируйте если не знаете что это такое)")
 
-    elif selected_algorithm == possible_algorithms[3]:  # SVM
+    elif selected_algorithm == possible_algorithms[3]:  # Метод Опорных Векторов
         kwargs['C'] = st.slider("Регуляризация", min_value=0.1, max_value=5.0, value=1.0)
         kwargs['use_class_weights'] = st.checkbox('Приоритизировать более редкие классы в обучении',
                                                   key='class_weights_checkbox')
@@ -80,6 +89,8 @@ if __name__ == "__main__":
         kwargs['min_samples_split'] = st.slider("Минимальное число сэмплов для деления дерева", min_value=2,
                                                 max_value=5, value=2)
         kwargs['criterion'] = st.selectbox("Функция ошибки", ['gini', 'entropy', 'log_loss'])
+        kwargs['use_class_weights'] = st.checkbox('Приоритизировать более редкие классы в обучении',
+                                                  key='class_weights_checkbox')
 
     elif selected_algorithm == possible_algorithms[5]:  # Случайный Лес
         kwargs['n_estimators'] = st.slider("Количество деревьев решений", min_value=1, max_value=200, value=100, step=1)
@@ -87,6 +98,8 @@ if __name__ == "__main__":
         kwargs['Tree_max_depth'] = max_depth if max_depth > 0 else None
         kwargs['min_samples_split'] = st.slider("Минимальное число сэмплов для деления дерева", min_value=2,
                                                 max_value=5, value=2)
+        kwargs['use_class_weights'] = st.checkbox('Приоритизировать более редкие классы в обучении',
+                                                  key='class_weights_checkbox')
 
     with st.expander("Продвинутые опции"):
         kwargs['random_state'] = st.number_input("Рандомное состояние", value=100)
@@ -132,7 +145,7 @@ if __name__ == "__main__":
                              on_click=train_buttons_callback)
 
     # Словарь, который переводит введенную строку в класс заданного алгоритма
-    str_to_algorithm = {'Нейросеть': NeuralNetwork, 'XGBoost': GradientBoostingAlgorithm, 'SVM': SVMAlgorithm,
+    str_to_algorithm = {'Нейросеть': NeuralNetwork, 'XGBoost': GradientBoostingAlgorithm, 'Метод Опорных Векторов': SVMAlgorithm,
                         'Дерево Решений': DecisionTreeAlgorithm, 'Случайный Лес': RandomForestAlgorithm,
                         'Гауссовский классификатор': GaussianAlgorithm}
 
@@ -242,7 +255,7 @@ if __name__ == "__main__":
         if val_percentage > 0 and sst.val_score is not None:
             st.info(f"Точность модели на валидационной выборке: {round(100*sst.val_score, 3)}%")
 
-        # Создаем загрузщик для тестового файла
+        # Создаем загрузчик для тестового файла
         test_file = st.file_uploader("Загрузите тестовую выборку", key='upload_test_dataset', type=["csv"],
                                      on_change=test_buttons_callback)
         st.markdown("---")
@@ -270,8 +283,11 @@ if __name__ == "__main__":
             st.info(f"Точность модели на тестовой выборке: {round(100*test_score, 3)}%")
 
             predictions = [label_to_classname[i] for i in predictions.flatten()]  # Переводим лейблы в названия классов
+            y_test_labels = [label_to_classname[i] for i in y_test.flatten()]
             # Создаем датафрейм с ID сотрудников и предсказаниям нейросети
-            predictions_dataframe = pd.DataFrame(data={'ID Сотрудника': data_indices, 'Предсказание': predictions})
+            predictions_dataframe = pd.DataFrame(data={'ID Сотрудника': data_indices,
+                                                       'Предсказание': predictions,
+                                                       'Правильные ответы': y_test_labels})
 
             # Выводим то, что предсказала модель
             st.write("Предсказания модели: ")

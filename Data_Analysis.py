@@ -45,7 +45,7 @@ def create_histogram_streamlit(data_column):
 
     unique_categories, counts = np.unique(data_column, return_counts=True)
 
-    fig, ax = plt.subplots(figsize=(32, 24))
+    fig, ax = plt.subplots(figsize=(28, 20))
     ax.bar(unique_categories, counts, color='orange', align='center', alpha=0.5)
     ax.set_title('гистограмма')
     ax.grid()

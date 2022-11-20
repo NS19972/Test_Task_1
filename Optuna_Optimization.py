@@ -8,7 +8,8 @@ tf.random.set_seed(seed)  # Устанавливаем сид для нейро�
 
 def optuna_optimization(x_train, y_train, x_val, y_val, selected_algorithm, optimization_epochs, kwargs):
     def objective_function(trial):
-        if isinstance(selected_algorithm, NeuralNetwork):  # Подбор гиперпараметров для нейросети
+        # Подбор гиперпараметров для нейросети
+        if isinstance(selected_algorithm, NeuralNetwork):
             kwargs.update({'hidden_layers': trial.suggest_int("hidden_layers", 0, 4)})  # Задаем количество скрытых слоев
             # Задаем количество нейронов в слоях
             layer_1_size = trial.suggest_int("layer_1_size", 4, 64, log=True) if kwargs['hidden_layers'] >= 1 else 0
@@ -24,6 +25,7 @@ def optuna_optimization(x_train, y_train, x_val, y_val, selected_algorithm, opti
 
             algorithm = NeuralNetwork(**kwargs)  # Создаем новый объект нейронной сети
 
+        # Подбор гиперпараметров для градиентного бустинга
         elif isinstance(selected_algorithm, GradientBoostingAlgorithm):
             kwargs.update({'GB_learning_rate': trial.suggest_float('GB_learning_rate', 1e-2, 5e-1, log=True)})
             kwargs.update({'n_estimators': trial.suggest_int('n_estimators', 10, 500, log=True)})
@@ -32,22 +34,27 @@ def optuna_optimization(x_train, y_train, x_val, y_val, selected_algorithm, opti
 
             algorithm = GradientBoostingAlgorithm(**kwargs)
 
+        # Подбор гиперпараметров для случайного леса
         elif isinstance(selected_algorithm, RandomForestAlgorithm):
             kwargs.update({'n_estimators': trial.suggest_int('n_estimators', 10, 500, log=True)})
             use_max_depth = trial.suggest_categorical('use_max_depth', [True, False])
             kwargs.update({'Tree_max_depth': trial.suggest_int('Tree_max_depth', 1, 5) if use_max_depth else None})
             kwargs.update({'min_samples_split': trial.suggest_int('min_samples_split', 2, 4)})
+            kwargs.update({'use_class_weights': trial.suggest_categorical('use_class_weights', [True, False])})  # Использовать взвешенные классы?
 
             algorithm = RandomForestAlgorithm(**kwargs)
 
+        # Подбор гиперпараметров для дерева решений
         elif isinstance(selected_algorithm, DecisionTreeAlgorithm):
             use_max_depth = trial.suggest_categorical('use_max_depth', [True, False])
             kwargs.update({'Tree_max_depth': trial.suggest_int('Tree_max_depth', 1, 5) if use_max_depth else None})
             kwargs.update({'criterion': trial.suggest_categorical('criterion', ['gini', 'entropy', 'log_loss'])})
             kwargs.update({'min_samples_split': trial.suggest_int('min_samples_split', 2, 4)})
+            kwargs.update({'use_class_weights': trial.suggest_categorical('use_class_weights', [True, False])})  # Использовать взвешенные классы?
 
             algorithm = DecisionTreeAlgorithm(**kwargs)
 
+        # Подбор гиперпараметров для метода опорных векторов
         elif isinstance(selected_algorithm, SVMAlgorithm):
             kwargs.update({'C': trial.suggest_float('C', 0.5, 2)})
             kwargs.update({'use_class_weights': trial.suggest_categorical('use_class_weights', [True, False])})
@@ -56,6 +63,7 @@ def optuna_optimization(x_train, y_train, x_val, y_val, selected_algorithm, opti
 
             algorithm = SVMAlgorithm(**kwargs)
 
+        # Подбор гиперпараметров для гауссовского алгоритма
         elif isinstance(selected_algorithm, GaussianAlgorithm):
             kwargs.update({'max_iter_predict': trial.suggest_int('max_iter_predict', 10, 500, log=True)})
             kwargs.update({'warm_start': trial.suggest_categorical('warm_start', [True, False])})

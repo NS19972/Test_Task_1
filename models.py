@@ -55,6 +55,7 @@ class DecisionTreeAlgorithm(GradientBoostingAlgorithm):
     def __init__(self, **kwargs):
         self.model = DecisionTreeClassifier(max_depth=kwargs['Tree_max_depth'], criterion=kwargs['criterion'],
                                             min_samples_split=kwargs['min_samples_split'],
+                                            class_weight=None if not kwargs['use_class_weights'] else 'balanced',
                                             random_state=kwargs['random_state']
                                             )  # Создаем объект алгоритма DecisionTreeClassifier
 
@@ -65,6 +66,7 @@ class RandomForestAlgorithm(GradientBoostingAlgorithm):
     def __init__(self, **kwargs):
         self.model = RandomForestClassifier(n_estimators=kwargs['n_estimators'], max_depth=kwargs['Tree_max_depth'],
                                             min_samples_split=kwargs['min_samples_split'],
+                                            class_weight=None if not kwargs['use_class_weights'] else 'balanced',
                                             random_state=kwargs['random_state']
                                             ) # Создаем объект алгоритма RandomForestClassifier
 
