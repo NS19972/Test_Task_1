@@ -217,7 +217,8 @@ def get_train_dataset(train_data, val_percentage, scale_data=False, onehot_encod
         return x, None, y, None, label_encoders, onehot_encoders, scaler
     # Иначе, делаем train_test_split и возвращаем результат
     x_train, x_val, y_train, y_val = train_test_split(x, y, test_size=val_percentage)
-    return x_train, x_val, y_train, y_val, label_encoders, onehot_encoders, scaler
+    x_val, x_test, y_val, y_test = train_test_split(x_val, y_val, test_size=0.5)
+    return x_train, x_val, x_test, y_train, y_val, y_test, label_encoders, onehot_encoders, scaler
 
 
 @st.cache(allow_output_mutation=True)

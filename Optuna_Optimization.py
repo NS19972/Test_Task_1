@@ -66,7 +66,7 @@ def optuna_optimization(x_train, y_train, x_val, y_val, selected_algorithm, opti
             raise KeyError
 
         algorithm.train(x_train, y_train)  # Задаем параметры алгоритма
-        val_score = algorithm.validate(x_val, y_val)  # Оптимизируем параметры только на валидационной выборке
+        val_score, _ = algorithm.validate(x_val, y_val)  # Оптимизируем параметры только на валидационной выборке
         return val_score
 
     percent_progress = 0.0  # Значение прогресс-бара инициализируется как 0

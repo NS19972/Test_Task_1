@@ -107,10 +107,10 @@ if __name__ == "__main__":
 
         if use_optuna:
             optuna_epochs = st.slider("Кол-во эпох для оптимизации алгоритма с помощью TPE",
-                                      min_value=1, max_value=1000, value=50, key='optuna_epochs')
+                                      min_value=1, max_value=1000, value=100, key='optuna_epochs')
 
             st.markdown("""
-                Рекомендуется использовать не меньше 50 эпох для оптимизации.
+                Рекомендуется использовать не меньше 100 эпох для оптимизации.
                 
                 **ПРИМЕЧАНИЕ: Программе может потребоваться много времени для выполнения большого количества эпох.**""")
 
@@ -159,7 +159,7 @@ if __name__ == "__main__":
 
         # Доля валидационной выборки от общей обучающей+валидационной выборки
         val_percentage = st.sidebar.slider("Доля валидационной выборки от общего датасета",
-                                           min_value=0.0, max_value=0.9, value=0.2)
+                                           min_value=0.0, max_value=0.9, value=0.3)
 
         left, right = st.sidebar.columns(2)  # Метод для отрисовки двух кнопок рядом друг с другом
         with left:
@@ -199,7 +199,7 @@ if __name__ == "__main__":
         if not sst.model_trained:
             sst.algorithm = str_to_algorithm[selected_algorithm](**kwargs)
         train_dataframe = train_dataframe[sst.dataset_columns] # Обрабатываем датасет и формируем x, y для val и train
-        x_train, x_val, y_train, y_val, label_encoders, onehot_encoders, scaler = get_train_dataset(
+        x_train, x_val, x_test, y_train, y_val, y_test, label_encoders, onehot_encoders, scaler = get_train_dataset(
             train_dataframe, val_percentage=val_percentage,  # Загружаем обработанный датасет
             scale_data=sst.algorithm.requires_normalization, onehot_encode=sst.algorithm.requires_OHE
         )
@@ -228,48 +228,26 @@ if __name__ == "__main__":
             sst.algorithm.train(x_train, y_train)  # Обучаем алгоритм
 
             # Валидируем на обучающей выборке
-            sst.train_score = sst.algorithm.validate(x_train, y_train, subset_type='train')
+            sst.train_score_1, sst.train_score_2 = sst.algorithm.validate(x_train, y_train, subset_type='train')
             # Валидируем на валидационной выборке (только если у нас есть валидационная выборка)
-            sst.val_score = sst.algorithm.validate(x_val, y_val) if val_percentage > 0 else None
+            sst.val_score_1, sst.val_score_2 = sst.algorithm.validate(x_val, y_val) if val_percentage > 0 else None
 
             # Устанавливаем флажок, который сообщает что модель уже обучена (чтобы не обучать дважды)
             sst.model_trained = True
 
         # Выводим точности на обучающей и валидационной выборки в стримлит
-        st.info(f"Точность модели на обучающей выборке: {round(100*sst.train_score, 3)}%")
-        if val_percentage > 0 and sst.val_score is not None:
-            st.info(f"Точность модели на валидационной выборке: {round(100*sst.val_score, 3)}%")
+        st.info(f"Точность модели на обучающей выборке: {round(100*sst.train_score_1, 3)}% (recall), {round(100*sst.train_score_2, 3)} (accuracy)")
+        if val_percentage > 0:
+            st.info(f"Точность модели на валидационной выборке: {round(100*sst.val_score_1, 3)}% (recall), {round(100*sst.val_score_2, 3)} (accuracy)")
 
-        # Создаем загрузщик для тестового файла
-        test_file = st.file_uploader("Загрузите тестовую выборку", key='upload_test_dataset', type=["csv"],
-                                     on_change=test_buttons_callback)
-        st.markdown("---")
+            test_score_1, test_score_2, predictions = sst.algorithm.test(x_test, y_test)
 
-        # Кнопка для теста
-        test_button = st.button(label='Тестировать', key='test_button',
-                                disabled=True if not test_file else False,
-                                on_click=test_buttons_callback)
-
-        if test_button:  # Когда нажимаем на тестовую кнопку:
-            x_test, y_test, data_indices = get_test_dataset(  # Собираем тестовый датасет используя кодировщики из обучающей
-                test_file, sst.dataset_columns, label_encoders, onehot_encoders, scaler,
-                scale_data=sst.algorithm.requires_normalization, onehot_encode=sst.algorithm.requires_OHE
-            )
-
-            # Тестируем
-            try:  # Пытаемся выполнить код (получается ValueError если пользователь поменял набор столбцов после трейна)
-                test_score, predictions = sst.algorithm.test(x_test, y_test)
-            # При возникновении ValueError, сообщаем причину ошибки пользователю и просим переобучить модель
-            # При использовании нейросети возникает tf.errors.InvalidArgumentError вместо ValueError - но суть та же
-            except (ValueError, tf.errors.InvalidArgumentError):
-                st.error("Необходимо заново обучить модель после изменения набора столбцов")
-                st.stop()
             # Выводим точность на тестовой выборке в стримлит
-            st.info(f"Точность модели на тестовой выборке: {round(100*test_score, 3)}%")
+            st.info(f"Точность модели на тестовой выборке: {round(100*test_score_1, 3)}% (recall), {round(100*test_score_2, 3)}% (accuracy)")
 
             predictions = [label_to_classname[i] for i in predictions.flatten()]  # Переводим лейблы в названия классов
             # Создаем датафрейм с ID сотрудников и предсказаниям нейросети
-            predictions_dataframe = pd.DataFrame(data={'ID Сотрудника': data_indices, 'Предсказание': predictions})
+            predictions_dataframe = pd.DataFrame(data={'Предсказание': predictions})
 
             # Выводим то, что предсказала модель
             st.write("Предсказания модели: ")

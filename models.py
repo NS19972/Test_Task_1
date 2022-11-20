@@ -6,7 +6,7 @@ import streamlit
 from sklearn.ensemble import *
 from sklearn.gaussian_process import GaussianProcessClassifier
 from sklearn.tree import DecisionTreeClassifier
-from sklearn.metrics import recall_score
+from sklearn.metrics import recall_score, accuracy_score
 from sklearn.svm import *
 from constants import *
 from misc_functions import calculate_class_weights
@@ -28,15 +28,19 @@ class GradientBoostingAlgorithm:
 
     def validate(self, x_val, y_val, subset_type='validation'):
         y_pred = self.model.predict(x_val)                                     #Извлекаем предсказание
-        score = recall_score(y_val, y_pred, average='micro')                   #Считаем метрику
-        print(f"Model recall score on {subset_type} subset is {score}")
-        return score
+        score_1 = recall_score(y_val, y_pred, average='micro')                   #Считаем метрику
+        score_2 = accuracy_score(y_val, y_pred)                   #Считаем метрику
+        print(f"Model recall score on {subset_type} subset is {score_1}")
+        print(f"Model accuracy score on {subset_type} subset is {score_2}")
+        return score_1, score_2
 
     def test(self, x_test, y_test):
         y_pred = self.model.predict(x_test)
-        score = recall_score(y_test, y_pred, average='micro')
-        print(f"Model recall score on test subset is {score}")
-        return score, y_pred
+        score_1 = recall_score(y_test, y_pred, average='micro')
+        score_2 = accuracy_score(y_test, y_pred)
+        print(f"Model recall score on test subset is {score_1}")
+        print(f"Model accuracy score on test subset is {score_2}")
+        return score_1, score_2, y_pred
 
 
 class SVMAlgorithm(GradientBoostingAlgorithm):
@@ -107,18 +111,22 @@ class NeuralNetwork:
         y_val = np.array(y_val, ndmin=2)
         y_pred = self.model.predict(x_val, batch_size=self.kwargs['batch_size'])
         y_pred = np.argmax(y_pred, axis=1)
-        score = recall_score(y_val.flatten(), y_pred.flatten(), average='micro')
-        print(f"Model recall score on {subset_type} subset is {score}")
-        return score
+        score_1 = recall_score(y_val.flatten(), y_pred.flatten(), average='micro')
+        score_2 = accuracy_score(y_val.flatten(), y_pred.flatten())
+        print(f"Model recall score on {subset_type} subset is {score_1}")
+        print(f"Model accuracy score on {subset_type} subset is {score_2}")
+        return score_1, score_2
 
     def test(self, x_test, y_test):
         x_test = np.array(x_test, ndmin=2)
         y_test = np.array(y_test, ndmin=2)
         y_pred = self.model.predict(x_test, batch_size=batch_size)
         y_pred = np.argmax(y_pred, axis=1)
-        score = recall_score(y_test.flatten(), y_pred.flatten(), average='micro')
-        print(f"Model recall score on test subset is {score}")
-        return score, y_pred.flatten()
+        score_1 = recall_score(y_test.flatten(), y_pred.flatten(), average='micro')
+        score_2 = accuracy_score(y_test.flatten(), y_pred.flatten())
+        print(f"Model recall score on test subset is {score_1}")
+        print(f"Model accuracy score on test subset is {score_2}")
+        return score_1, score_2, y_pred.flatten()
 
     # Метод, который принимает на вход список (количество нейронов в каждом слое), и удаляет всё в списке, что находится
     # после первого нуля (включая сам 0).
