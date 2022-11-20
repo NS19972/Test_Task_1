@@ -25,7 +25,7 @@ def analyze_class_frequency(dataset):
 def create_cdf_streamlit(data_column):
     fig, ax = plt.subplots(figsize=(14, 8))
     ax.hist(data_column, bins=200, color='red', cumulative=True, alpha=0.5)
-    ax.set_title('кумулятивная функция распределения')
+    ax.set_title('кумулятивная функция распределения', fontsize=16)
     ax.grid()
     return fig
 
@@ -47,7 +47,7 @@ def create_histogram_streamlit(data_column):
 
     fig, ax = plt.subplots(figsize=(28, 20))
     ax.bar(unique_categories, counts, color='orange', align='center', alpha=0.5)
-    ax.set_title('гистограмма')
+    ax.set_title('гистограмма', fontsize=16)
     ax.grid()
     return fig
 
@@ -121,7 +121,7 @@ def create_heatmap_streamlit(dataset):
             dataset[column] = LabelEncoder().fit_transform(dataset[column])
 
 
-    correlation_matrix = dataset.corr(method='spearman')
+    correlation_matrix = dataset.corr(method='kendall')
     fig, ax = plt.subplots(figsize=(14, 8))
     sns.heatmap(correlation_matrix, annot=True, ax=ax)
     ax.set_title("Матрица корреляции")
