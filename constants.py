@@ -21,7 +21,6 @@ C = 1.0
 Tree_max_depth = None
 class_weight = None
 warm_start = True
-use_class_weights = True
 criterion = 'gini'
 kernel = 'rbf'
 
@@ -32,7 +31,7 @@ num_epochs = 10
 use_class_weights = True
 batch_size = 32
 
-# Class and function arguments, constants
+# Словарь аргументов
 kwargs = {
     'GB_learning_rate': GB_learning_rate, 'n_estimators': n_estimators, 'GB_max_depth': GB_max_depth,
     'neural_network_hidden_neurons': neural_network_hidden_neurons, 'NN_learning_rate': NN_learning_rate,
@@ -41,6 +40,7 @@ kwargs = {
     'Tree_max_depth': Tree_max_depth
 }
 
+# Словарь лейблов
 label_to_classname = \
     {0: "Перевод по должности",
      1: "Перевод по подразделению с сохранением должности",

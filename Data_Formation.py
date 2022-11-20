@@ -161,7 +161,7 @@ def get_calls_data(input_data):
     data = input_data.join(in_calls, how='left')
     data = data.join(out_calls, how='left')
     columns_to_fill = in_calls.columns.values.tolist() + out_calls.columns.values.tolist()
-    data[columns_to_fill] = data[columns_to_fill].fillna(0)          #Записываем 0 туда, где нет данных
+    data[columns_to_fill] = data[columns_to_fill].fillna(0)          # Записываем 0 туда, где нет данных
     return data
 
 
@@ -185,12 +185,12 @@ def get_train_dataset(train_data, val_percentage, scale_data=False, onehot_encod
     train_data, education_encoders = process_education_info(train_data)
     # Масштабирование скалярных значений (трансформация столбцов в ст. распределение)
     scaler = StandardScaler()
-    if scale_data:
+    if scale_data:  # Скалируем релевантные столбцы (если алгоритм этого требует)
         common_columns = [i for i in train_data.columns.values if i in scalar_columns]  # Список всех столбцов которые подлежат скалированию
         train_data[common_columns] = scaler.fit_transform(train_data[common_columns])  # Скалируем выше-указанные столбцы
 
     onehot_encoders = {}
-    if onehot_encode:
+    if onehot_encode:  # Кодируем релевантные столбцы в one-hot encoding (если алгоритм этого требует)
         columns_in_dataset = [i for i in categorical_columns if i in train_data.columns]  # Список всех столбцов которые подлежат onehot кодированию
         arrays_store = []
         for column in columns_in_dataset:
@@ -202,42 +202,37 @@ def get_train_dataset(train_data, val_percentage, scale_data=False, onehot_encod
 
         train_data.drop(columns_in_dataset, axis=1, inplace=True)
 
-    x, y = train_data.loc[:, train_data.columns != 'type'].values, \
-           train_data.loc[:, train_data.columns == 'type'].values
+    # Делим итоговый датафрейм на х и у
+    x, y = train_data.loc[:, train_data.columns != 'type'].values, train_data.loc[:, train_data.columns == 'type'].values
 
-    if onehot_encode:
+    if onehot_encode:  # Если мы делали OHE, склеиваем OHE массивы в х
         x = np.concatenate([x] + arrays_store, axis=1)
 
-    label_encoders = {}
+    label_encoders = {}  # Добавляем все лейбл-энкодеры в единый словарь
     if education_encoders is not None:
         label_encoders.update(education_encoders)
 
+    # Если нет валидационной выборки, возвращаем х и у как целые массивы
     if val_percentage == 0:
         return x, None, y, None, label_encoders, onehot_encoders, scaler
+    # Иначе, делаем train_test_split и возвращаем результат
     x_train, x_val, y_train, y_val = train_test_split(x, y, test_size=val_percentage)
     return x_train, x_val, y_train, y_val, label_encoders, onehot_encoders, scaler
 
 
 @st.cache(allow_output_mutation=True)
 def get_test_dataset(file, dataset_columns, label_encoders, onehot_encoders, scaler, scale_data=False, onehot_encode=False):
-    test_data = pd.read_csv(file, index_col='id')
+    test_data = get_dataframe(file)
     data_index = test_data.index.values
-    test_data = get_tasks_info(test_data)
-    test_data = get_skud_data(test_data)
-    test_data = get_connection_data(test_data)
-    test_data = get_working_data(test_data)
-    test_data = get_network_data(test_data)
-    test_data = get_calls_data(test_data)
-    test_data = get_education_info(test_data)
 
     test_data = test_data[dataset_columns]
     test_data, _ = process_education_info(test_data, label_encoders)
 
-    if scale_data:
+    if scale_data:  # Скалируем релевантные столбцы (если алгоритм этого требует)
         common_columns = [i for i in test_data.columns.values if i in scalar_columns]  # Список всех столбцов которые подлежат скалированию
         test_data[common_columns] = scaler.transform(test_data[common_columns])  # Скалируем выше-указанные столбцы
 
-    if onehot_encode:
+    if onehot_encode:  # Кодируем релевантные столбцы в one-hot encoding (если алгоритм этого требует)
         columns_in_dataset = [i for i in categorical_columns if i in test_data.columns]  # Список всех столбцов которые подлежат onehot кодированию
         arrays_store = []
         for column in columns_in_dataset:
@@ -246,9 +241,10 @@ def get_test_dataset(file, dataset_columns, label_encoders, onehot_encoders, sca
                 arrays_store.append(onehot_data)
         test_data.drop(columns_in_dataset, axis=1, inplace=True)
 
+    # Делим итоговый датафрейм на х и у
     x_test, y_test = test_data.loc[:, test_data.columns != 'type'].values, test_data.loc[:, test_data.columns == 'type'].values
 
-    if onehot_encode:
+    if onehot_encode:  # Если мы делали OHE, склеиваем OHE массивы в х
         x_test = np.concatenate([x_test] + arrays_store, axis=1)
 
     return x_test, y_test, data_index

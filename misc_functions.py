@@ -36,3 +36,4 @@ def test_buttons_callback():
 # Колбэк который сбрасывает вывод (точность) при изменении выбора алгоритма
 def possible_algorithms_callback():
     sst.train_button_clicked = False
+
