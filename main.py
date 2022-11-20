@@ -107,10 +107,10 @@ if __name__ == "__main__":
 
         if use_optuna:
             optuna_epochs = st.slider("Кол-во эпох для оптимизации алгоритма с помощью TPE",
-                                      min_value=1, max_value=1000, value=50, key='optuna_epochs')
+                                      min_value=1, max_value=1000, value=100, key='optuna_epochs')
 
             st.markdown("""
-                Рекомендуется использовать не меньше 50 эпох для оптимизации.
+                Рекомендуется использовать не меньше 100 эпох для оптимизации.
                 
                 **ПРИМЕЧАНИЕ: Программе может потребоваться много времени для выполнения большого количества эпох.**""")
 
@@ -159,7 +159,8 @@ if __name__ == "__main__":
 
         # Доля валидационной выборки от общей обучающей+валидационной выборки
         val_percentage = st.sidebar.slider("Доля валидационной выборки от общего датасета",
-                                           min_value=0.0, max_value=0.9, value=0.2)
+                                           min_value=0.0, max_value=0.9, value=0.2,
+                                           on_change=possible_algorithms_callback)
 
         left, right = st.sidebar.columns(2)  # Метод для отрисовки двух кнопок рядом друг с другом
         with left:
@@ -183,6 +184,7 @@ if __name__ == "__main__":
             st.sidebar.pyplot(analyze_class_frequency_streamlit(train_dataframe))
 
         st.sidebar.markdown('---')
+        st.sidebar.subheader("Дополнительная визуализация данных")
         column_for_analysis = st.sidebar.selectbox("Выберите столбец для визуализации данных: ", options=selected_columns)
         show_graph_button = st.sidebar.button("Визуализировать")
 

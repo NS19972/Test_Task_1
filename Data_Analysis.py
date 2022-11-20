@@ -43,8 +43,10 @@ def create_histogram_streamlit(data_column):
     for category in infrequent_categories:
         data_column.loc[data_column == category] = 'Другое'
 
-    fig, ax = plt.subplots(figsize=(14, 8))
-    ax.hist(data_column, color='orange', align='mid', cumulative=True, alpha=0.5)
+    unique_categories, counts = np.unique(data_column, return_counts=True)
+
+    fig, ax = plt.subplots(figsize=(32, 24))
+    ax.bar(unique_categories, counts, color='orange', align='center', alpha=0.5)
     ax.set_title('гистограмма')
     ax.grid()
     return fig
