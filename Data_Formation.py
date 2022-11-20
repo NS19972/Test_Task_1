@@ -214,7 +214,7 @@ def get_train_dataset(train_data, val_percentage, scale_data=False, onehot_encod
 
     # Если нет валидационной выборки, возвращаем х и у как целые массивы
     if val_percentage == 0:
-        return x, None, y, None, label_encoders, onehot_encoders, scaler
+        return x, None, None, y, None, None, label_encoders, onehot_encoders, scaler
     # Иначе, делаем train_test_split и возвращаем результат
     x_train, x_val, y_train, y_val = train_test_split(x, y, test_size=val_percentage)
     x_val, x_test, y_val, y_test = train_test_split(x_val, y_val, test_size=0.5)

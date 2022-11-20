@@ -159,7 +159,8 @@ if __name__ == "__main__":
 
         # Доля валидационной выборки от общей обучающей+валидационной выборки
         val_percentage = st.sidebar.slider("Доля валидационной выборки от общего датасета",
-                                           min_value=0.0, max_value=0.9, value=0.3)
+                                           min_value=0.0, max_value=0.9, value=0.3,
+                                           on_change=possible_algorithms_callback)
 
         left, right = st.sidebar.columns(2)  # Метод для отрисовки двух кнопок рядом друг с другом
         with left:
