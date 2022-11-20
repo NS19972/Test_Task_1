@@ -184,6 +184,7 @@ if __name__ == "__main__":
             st.sidebar.pyplot(analyze_class_frequency_streamlit(train_dataframe))
 
         st.sidebar.markdown('---')
+        st.sidebar.subheader("Дополнительная визуализация данных")
         column_for_analysis = st.sidebar.selectbox("Выберите столбец для визуализации данных: ", options=selected_columns)
         show_graph_button = st.sidebar.button("Визуализировать")
 
