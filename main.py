@@ -53,7 +53,8 @@ if __name__ == "__main__":
              "выборку, и также загрузить аналогичный файл в качестве тестовой выборки. Затем, нужно нажать на кнопку "
              "'Обучить'.")
 
-    train_file = st.file_uploader("Загрузите обучающую выборку", key='upload_train_dataset', type=["csv"])
+    train_file = st.file_uploader("Загрузите обучающую выборку", key='upload_train_dataset', type=["csv"],
+                                  on_change=not_trained_callback)
     st.markdown("---")
 
     if train_file:
@@ -71,7 +72,7 @@ if __name__ == "__main__":
     possible_algorithms = ['XGBoost', 'Нейросеть', 'Гауссовский классификатор', 'Метод Опорных Векторов', 'Дерево Решений', 'Случайный Лес']
     selected_algorithm = st.selectbox(
         "Выберите алгоритм для модели: \n (примечание: модель нужно обучать заново после изменения набора столбцов)",
-        possible_algorithms, key='selected_algorithm', on_change=possible_algorithms_callback)
+        possible_algorithms, key='selected_algorithm', on_change=not_trained_callback)
 
     st.write("Настройте гиперпараметры для модели:")
     if selected_algorithm == possible_algorithms[0]:  # XGBoost
@@ -93,26 +94,27 @@ if __name__ == "__main__":
         kwargs['NN_learning_rate'] = 10 ** (4 * learning_rate - 5)
         kwargs['batch_size'] = st.slider('Размер пакета', min_value=16, max_value=256, value=32)
         kwargs['use_class_weights'] = st.checkbox('Приоритизировать более редкие классы в обучении',
-                                                  key='class_weights_checkbox')
+                                                  key='class_weights_checkbox', on_change=not_trained_callback)
 
     elif selected_algorithm == possible_algorithms[2]:  # Гауссовский классификатор
         kwargs['max_iter_predict'] = st.slider("Максимальное число итераций", min_value=10, max_value=500, value=100)
-        kwargs['warm_start'] = st.checkbox("Использовать 'тёплое' начало (игнорируйте если не знаете что это такое)")
+        kwargs['warm_start'] = st.checkbox("Использовать 'тёплое' начало (игнорируйте если не знаете что это такое)",
+                                           on_change=not_trained_callback)
 
     elif selected_algorithm == possible_algorithms[3]:  # Метод Опорных Векторов
         kwargs['C'] = st.slider("Регуляризация", min_value=0.1, max_value=5.0, value=1.0)
         kwargs['use_class_weights'] = st.checkbox('Приоритизировать более редкие классы в обучении',
-                                                  key='class_weights_checkbox')
-        kwargs['kernel'] = st.selectbox("Ядро", ['poly', 'rbf', 'sigmoid'])
+                                                  key='class_weights_checkbox', on_change=not_trained_callback)
+        kwargs['kernel'] = st.selectbox("Ядро", ['poly', 'rbf', 'sigmoid'], on_change=not_trained_callback)
 
     elif selected_algorithm == possible_algorithms[4]:  # Дерево Решений
         max_depth = st.slider("Максимальная глубина дерева (0 = нет ограничений)", min_value=0, max_value=10, value=0)
         kwargs['Tree_max_depth'] = max_depth if max_depth > 0 else None
         kwargs['min_samples_split'] = st.slider("Минимальное число сэмплов для деления дерева", min_value=2,
                                                 max_value=5, value=2)
-        kwargs['criterion'] = st.selectbox("Функция ошибки", ['gini', 'entropy', 'log_loss'])
+        kwargs['criterion'] = st.selectbox("Функция ошибки", ['gini', 'entropy', 'log_loss'], on_change=not_trained_callback)
         kwargs['use_class_weights'] = st.checkbox('Приоритизировать более редкие классы в обучении',
-                                                  key='class_weights_checkbox')
+                                                  key='class_weights_checkbox', on_change=not_trained_callback)
 
     elif selected_algorithm == possible_algorithms[5]:  # Случайный Лес
         kwargs['n_estimators'] = st.slider("Количество деревьев решений", min_value=1, max_value=200, value=100, step=1)
@@ -120,11 +122,12 @@ if __name__ == "__main__":
         kwargs['Tree_max_depth'] = max_depth if max_depth > 0 else None
         kwargs['min_samples_split'] = st.slider("Минимальное число сэмплов для деления дерева", min_value=2,
                                                 max_value=5, value=2)
+        kwargs['criterion'] = st.selectbox("Функция ошибки", ['gini', 'entropy', 'log_loss'], on_change=not_trained_callback)
         kwargs['use_class_weights'] = st.checkbox('Приоритизировать более редкие классы в обучении',
-                                                  key='class_weights_checkbox')
+                                                  key='class_weights_checkbox', on_change=not_trained_callback)
 
     with st.expander("Продвинутые опции"):
-        kwargs['random_state'] = st.number_input("Рандомное состояние", value=100)
+        kwargs['random_state'] = st.number_input("Рандомное состояние", value=100, on_change=not_trained_callback)
 
     st.markdown('---')
 
@@ -195,7 +198,7 @@ if __name__ == "__main__":
         # Доля валидационной выборки от общей обучающей+валидационной выборки
         val_percentage = st.sidebar.slider("Доля валидационной выборки от общего датасета",
                                            min_value=0.0, max_value=0.9, value=0.2,
-                                           on_change=possible_algorithms_callback)
+                                           on_change=not_trained_callback)
 
         left, right = st.sidebar.columns(2)  # Метод для отрисовки двух кнопок рядом друг с другом
         with left:
@@ -220,7 +223,8 @@ if __name__ == "__main__":
 
         st.sidebar.markdown('---')
         st.sidebar.subheader("Дополнительная визуализация данных")
-        column_for_analysis = st.sidebar.selectbox("Выберите столбец для визуализации данных: ", options=selected_columns)
+        column_for_analysis = st.sidebar.selectbox("Выберите столбец для визуализации данных: ",
+                                                   options=selected_columns, on_change=not_trained_callback)
         show_graph_button = st.sidebar.button("Визуализировать")
 
         if show_graph_button:
@@ -279,15 +283,15 @@ if __name__ == "__main__":
 
         # Создаем загрузчик для тестового файла
         test_file = st.file_uploader("Загрузите тестовую выборку", key='upload_test_dataset', type=["csv"],
-                                     on_change=test_buttons_callback)
+                                     on_change=test_file_uploader_callback)
         st.markdown("---")
 
         # Кнопка для теста
-        test_button = st.button(label='Тестировать', key='test_button',
+        sst.test_button = st.button(label='Тестировать', key='start_test_button',
                                 disabled=True if not test_file else False,
                                 on_click=test_buttons_callback)
 
-        if test_button:  # Когда нажимаем на тестовую кнопку:
+        if sst.test_button:  # Когда нажимаем на тестовую кнопку:
             x_test, y_test, data_indices = get_test_dataset(  # Собираем тестовый датасет используя кодировщики из обучающей
                 test_file, sst.dataset_columns, label_encoders, onehot_encoders, scaler,
                 scale_data=sst.algorithm.requires_normalization, onehot_encode=sst.algorithm.requires_OHE

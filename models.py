@@ -11,11 +11,12 @@ from sklearn.svm import *
 from constants import *
 from misc_functions import calculate_class_weights
 
-np.random.seed(seed)   #Устанавливаем сид (sklearn использует сид от numpy)
+np.random.seed(seed)   # Устанавливаем сид (sklearn использует сид от numpy)
 
 class GradientBoostingAlgorithm:
-    requires_OHE = False           #Градиентный бустинг не требует onehot кодирования
-    requires_normalization = False #Градиентный бустинг не требует нормализации
+    requires_OHE = False            # Градиентный бустинг не требует onehot кодирования
+    requires_normalization = False  # Градиентный бустинг не требует нормализации
+
     def __init__(self, **kwargs):
         self.model = GradientBoostingClassifier(
             n_estimators=kwargs['n_estimators'], max_depth=kwargs['GB_max_depth'],
@@ -27,8 +28,8 @@ class GradientBoostingAlgorithm:
         self.model.fit(x_train, y_train.flatten())  # Обучаем алгоритм
 
     def validate(self, x_val, y_val, subset_type='validation'):
-        y_pred = self.model.predict(x_val)                                     #Извлекаем предсказание
-        score = recall_score(y_val, y_pred, average='micro')                   #Считаем метрику
+        y_pred = self.model.predict(x_val)                                  # Извлекаем предсказание
+        score = recall_score(y_val, y_pred, average='micro')                # Считаем метрику
         print(f"Model recall score on {subset_type} subset is {score}")
         return score
 
@@ -39,19 +40,22 @@ class GradientBoostingAlgorithm:
         return score, y_pred
 
 
+# Классификатор Опорных Векторов
 class SVMAlgorithm(GradientBoostingAlgorithm):
-    requires_OHE = True            #SVM ТРЕБУЕТ onehot кодирования
-    requires_normalization = True  #SVM ТРЕБУЕТ нормализации
+    requires_OHE = True            # SVM ТРЕБУЕТ onehot кодирования
+    requires_normalization = True  # SVM ТРЕБУЕТ нормализации
+
     def __init__(self, **kwargs):
         self.model = SVC(C=kwargs['C'], class_weight=kwargs['class_weight'], kernel=kwargs['kernel'],
                          random_state=kwargs['random_state'])  # Создаем объект алгоритма SVC
 
 
-#Практика показывает, что именно дерево решений достигает максимально высокой точности на тестовой выборке (~30%)
-#Однако при этом, точность на валидационной выборке значительно падает (до 46%)
+# Практика показывает, что именно дерево решений достигает максимально высокой точности на тестовой выборке (~30%)
+# Однако при этом, точность на валидационной выборке значительно падает (до 46%)
 class DecisionTreeAlgorithm(GradientBoostingAlgorithm):
-    requires_OHE = False           #Дерево решений не требует onehot кодирования
-    requires_normalization = False #Дерево решений не требует нормализации
+    requires_OHE = False           # Дерево решений не требует onehot кодирования
+    requires_normalization = False # Дерево решений не требует нормализации
+
     def __init__(self, **kwargs):
         self.model = DecisionTreeClassifier(max_depth=kwargs['Tree_max_depth'], criterion=kwargs['criterion'],
                                             min_samples_split=kwargs['min_samples_split'],
@@ -60,29 +64,36 @@ class DecisionTreeAlgorithm(GradientBoostingAlgorithm):
                                             )  # Создаем объект алгоритма DecisionTreeClassifier
 
 
+# Случайный Лес
 class RandomForestAlgorithm(GradientBoostingAlgorithm):
-    requires_OHE = False           #Рандомный лес не требует onehot кодирования
-    requires_normalization = False #Рандомный лес не требует нормализации
+    requires_OHE = False            # Рандомный лес не требует onehot кодирования
+    requires_normalization = False  # Рандомный лес не требует нормализации
+
     def __init__(self, **kwargs):
-        self.model = RandomForestClassifier(n_estimators=kwargs['n_estimators'], max_depth=kwargs['Tree_max_depth'],
+        self.model = RandomForestClassifier(criterion=kwargs['criterion'], n_estimators=kwargs['n_estimators'],
+                                            max_depth=kwargs['Tree_max_depth'],
                                             min_samples_split=kwargs['min_samples_split'],
                                             class_weight=None if not kwargs['use_class_weights'] else 'balanced',
                                             random_state=kwargs['random_state']
-                                            ) # Создаем объект алгоритма RandomForestClassifier
+                                            )  # Создаем объект алгоритма RandomForestClassifier
 
 
+# Гауссовский Алгоритм
 class GaussianAlgorithm(GradientBoostingAlgorithm):
-    requires_OHE = True           #Гауссовский алгоритм ТРЕБУЕТ onehot кодирования
-    requires_normalization = True #Гауссовский алгоритм ТРЕБУЕТ onehot кодирования
+    requires_OHE = True            # Гауссовский алгоритм ТРЕБУЕТ onehot кодирования
+    requires_normalization = True  # Гауссовский алгоритм ТРЕБУЕТ onehot кодирования
+
     def __init__(self, **kwargs):
         self.model = GaussianProcessClassifier(max_iter_predict=kwargs['max_iter_predict'],
                                                warm_start=kwargs['warm_start'],
                                                random_state=kwargs['random_state'])  # Создаем объект алгоритма Gaussian
 
 
+# Нейронная Сеть
 class NeuralNetwork:
-    requires_OHE = True           #Нейронная сеть ТРЕБУЕТ onehot кодирования
-    requires_normalization = True #Нейронная сеть ТРЕБУЕТ onehot кодирования
+    requires_OHE = True            # Нейронная сеть ТРЕБУЕТ onehot кодирования
+    requires_normalization = True  # Нейронная сеть ТРЕБУЕТ onehot кодирования
+
     def __init__(self, **kwargs):
         neural_network_hidden_neurons=self.filter_zeros(kwargs['neural_network_hidden_neurons'])
         np.random.seed(kwargs['random_state'])

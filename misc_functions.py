@@ -28,12 +28,24 @@ def train_buttons_callback():
     sst.model_trained = False
 
 
+# Колбэк который делает чтобы кнопка 'Обучить' не была нажата
+def not_trained_callback():
+    sst.train_button_clicked = False
+
+
 # Колбэк который запоминает что кнопка "test button" была нажата
 def test_buttons_callback():
     sst.train_button_clicked = True
 
 
+# Колбэк который запоминает что кнопка "test button" была нажата
+def test_file_uploader_callback():
+    sst.train_button_clicked = True
+    sst.test_button_clicked = False
+
+
+
 # Колбэк который сбрасывает вывод (точность) при изменении выбора алгоритма
-def possible_algorithms_callback():
+def not_trained_callback():
     sst.train_button_clicked = False
 

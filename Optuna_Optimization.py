@@ -39,6 +39,7 @@ def optuna_optimization(x_train, y_train, x_val, y_val, selected_algorithm, opti
             kwargs.update({'n_estimators': trial.suggest_int('n_estimators', 10, 500, log=True)})
             use_max_depth = trial.suggest_categorical('use_max_depth', [True, False])
             kwargs.update({'Tree_max_depth': trial.suggest_int('Tree_max_depth', 1, 5) if use_max_depth else None})
+            kwargs.update({'criterion': trial.suggest_categorical('criterion', ['gini', 'entropy', 'log_loss'])})
             kwargs.update({'min_samples_split': trial.suggest_int('min_samples_split', 2, 4)})
             kwargs.update({'use_class_weights': trial.suggest_categorical('use_class_weights', [True, False])})  # Использовать взвешенные классы?
 

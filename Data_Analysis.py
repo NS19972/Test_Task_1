@@ -26,6 +26,8 @@ def create_cdf_streamlit(data_column):
     fig, ax = plt.subplots(figsize=(14, 8))
     ax.hist(data_column, bins=200, color='red', cumulative=True, alpha=0.5)
     ax.set_title('кумулятивная функция распределения', fontsize=16)
+    ax.set_xlabel('значение параметра', fontsize=14)
+    ax.set_ylabel('доля сотрудников <= параметру', fontsize=14)
     ax.grid()
     return fig
 
@@ -48,6 +50,8 @@ def create_histogram_streamlit(data_column):
     fig, ax = plt.subplots(figsize=(28, 20))
     ax.bar(unique_categories, counts, color='orange', align='center', alpha=0.5)
     ax.set_title('гистограмма', fontsize=16)
+    ax.set_xlabel('категория', fontsize=14)
+    ax.set_ylabel('число сотрудников подходящие под категорию', fontsize=14)
     ax.grid()
     return fig
 
