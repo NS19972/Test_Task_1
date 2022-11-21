@@ -55,7 +55,7 @@ def get_tasks_info(input_data):
     # ПРИМЕЧАНИЕ - У нас примерно в 5 раз больше предметов с просрочкой чем без (Статус по просрочке)
     # Позже столбец по просрочкам делится на два столбца - 'Просрочено' и 'Не Просрочено'
     # Для каждого работника мы суммируем количество просроченных и не-просроченных задач
-    ALLOWED_COLUMNS = ['id', 'Not Lates', 'Lates']
+    ALLOWED_COLUMNS = ['id', 'Число задач без нарушения срока', 'Число задач с нарушением срока']
 
     tasks_data = pd.read_csv('dataset/Tasks.csv', dtype='object')  # Читаем датасет
 
@@ -65,8 +65,8 @@ def get_tasks_info(input_data):
 
     n_values = 2  # Указываем, что у нас всегда 2 категории
     lates_column_categorical = np.eye(n_values)[lates_column]   # Переводим числа в onehot вектор
-    tasks_data['Not Lates'] = lates_column_categorical[:, 0]   # Записываем все не просроченные задачи в один столбец (0 или 1)
-    tasks_data['Lates'] = lates_column_categorical[:, 1]       # Записываем все просроченные задачи в другой столбец (0 или 1)
+    tasks_data['Число задач без нарушения срока'] = lates_column_categorical[:, 0]   # Записываем все не просроченные задачи в один столбец (0 или 1)
+    tasks_data['Число задач с нарушением срока'] = lates_column_categorical[:, 1]       # Записываем все просроченные задачи в другой столбец (0 или 1)
 
     tasks_data = tasks_data[ALLOWED_COLUMNS]   # Берём только ранее указанные столбцы
 
@@ -83,9 +83,9 @@ def get_tasks_info(input_data):
 # Функция, которая извлекает и обрабатывает данные из файла SKUD.csv
 # Данная функция считает общее число часов учётом обедов и без для каждого сотрудника
 def get_skud_data(input_data):
-    # Берём только два новых столбца из этого файла: количество часов потраченных на работу с одебом и без обедов
+    # Берём только два новых столбца из этого файла: количество часов потраченных на работу с обедом и без обедов
     ALLOWED_COLUMNS = ['id', 'Длительность общая']
-    skud_data = pd.read_csv('dataset/SKUD.csv') # Читаем файл
+    skud_data = pd.read_csv('dataset/SKUD.csv')  # Читаем файл
     skud_data = skud_data[ALLOWED_COLUMNS]   # Берём только нужные столбцы
 
     # Меняем все запятые в числовых столбцах на точки, чтобы можно было перевести в числовой тип данных
@@ -93,6 +93,7 @@ def get_skud_data(input_data):
         skud_data[column] = skud_data[column].str.replace(',', '.').astype(float)
 
     skud_data = skud_data.groupby('id').sum()      # Группируем данные и суммируем, чтобы получить общее количество часов для каждого сотрудника
+    skud_data = skud_data.rename({'Длительность общая': 'Общая длительность прибывания в офисе'}, axis=1)
     data = input_data.join(skud_data, how='left')  # Делаем join, чтобы добавить данные только для сотрудников из обучающей выборки
     data[skud_data.columns.values] = data[skud_data.columns.values].fillna(0)  # Записываем 0 туда, где нет данных
     return data
@@ -106,6 +107,7 @@ def get_connection_data(input_data):
     connection_data['Признак опоздания'][connection_data['Признак опоздания'] == 'Опоздание'] = 1
     connection_data['Время опоздания'] = connection_data['Время опоздания'].str.replace(',', '.').astype(float)
     connection_data = connection_data[ALLOWED_COLUMNS].fillna(0)
+    connection_data = connection_data.rename({'Время опоздания': 'Общее время опозданий', 'Признак опоздания': 'Общее количество опозданий'}, axis=1)
 
     connection_data = connection_data.groupby('id').sum()
     data = input_data.join(connection_data, how='left')
@@ -119,8 +121,9 @@ def get_working_data(input_data):
     working_data = pd.read_csv('dataset/WorkingDay.csv')
     working_data = working_data[ALLOWED_COLUMNS]
     working_data[['activeTime', 'monitorTime']] = working_data[['activeTime', 'monitorTime']].astype(float)
-    working_data.rename({'monitorTime': 'monitorTimeWorking'}, axis=1, inplace=True)
+    working_data.rename({'activeTime': 'Активное время за клавиатурой', 'monitorTime': 'Активное время за монитором'}, axis=1, inplace=True)
     working_data = working_data.groupby('id').sum()
+
     data = input_data.join(working_data, how='left')
     data[working_data.columns.values] = data[working_data.columns.values].fillna(0)  # Записываем 0 туда, где нет данных
     return data
@@ -131,7 +134,7 @@ def get_network_data(input_data):
     ALLOWED_COLUMNS = ['id', 'monitor_Time']
     network_data = pd.read_csv('dataset/TimenNetwork.csv')
     network_data = network_data[ALLOWED_COLUMNS]
-    network_data.rename({'monitor_Time': 'monitorTimeNetwork'}, axis=1, inplace=True)
+    network_data.rename({'monitor_Time': 'Время активности в сети'}, axis=1, inplace=True)
     network_data = network_data.groupby('id').sum()
     data = input_data.join(network_data, how='left')
     data[network_data.columns.values] = data[network_data.columns.values].fillna(0)  # Записываем 0 туда, где нет данных
@@ -152,10 +155,10 @@ def get_calls_data(input_data):
     out_calls = calls_data[calls_data['InOut'] == 'FromUser']
 
     in_calls = in_calls.groupby('id').sum(numeric_only=True).rename(
-        {'NumberOfCalls': 'NumberOfInCalls', 'CallTime': 'InCallTime'}, axis=1
+        {'NumberOfCalls': 'Число входящих звонков', 'CallTime': 'Время на входящие звонки'}, axis=1
     )
     out_calls = out_calls.groupby('id').sum(numeric_only=True).rename(
-        {'NumberOfCalls': 'NumberOfOutCalls', 'CallTime': 'OutCallTime'}, axis=1
+        {'NumberOfCalls': 'Число выходящих звонков', 'CallTime': 'Время на выходящие звонки'}, axis=1
     )
 
     data = input_data.join(in_calls, how='left')
