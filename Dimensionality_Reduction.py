@@ -18,7 +18,7 @@ dataframe = get_dataframe('dataset/train.csv')  # Читаем файл с да�
 X, _, Y, _, label_encoders, onehot_encoders, scaler = get_train_dataset(dataframe, val_percentage=0,
                                                                         scale_data=True, onehot_encode=True)
 
-pca = PCA(n_components=2)   # Principal Component Anaylsis
+pca = PCA(n_components=2)   # Principal Component Analysis
 X_PCA = pca.fit_transform(X)
 
 tsne = TSNE(n_components=2, perplexity=10, init='pca')  # T-Distributed Stochastic Neighboring Embedding
